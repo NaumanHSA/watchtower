@@ -1,0 +1,10 @@
+services:
+  video-worker-controller:
+    image: video-worker-controller:V1.0.0
+    container_name: video-worker-controller
+    build: .
+    env_file:
+      - .env
+    ports:
+      - "7000:7000"
+    network_mode: host

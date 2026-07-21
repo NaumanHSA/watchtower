@@ -1,0 +1,10 @@
+__pycache__/
+*.tar
+extras/
+logs/
+
+test_detector.py
+test.json
+test.py
+test_cleint.py
+test.detector.py

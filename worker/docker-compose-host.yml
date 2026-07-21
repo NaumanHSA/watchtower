@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  mediamtx:
+    image: bluenviron/mediamtx:1.8.1
+    container_name: mediamtx
+    ports:
+      - "8889:8889"   # HTTP server port
+      - "9997:9997"   # Additional WebRTC signaling port (if used)
+    network_mode: host
+    volumes:
+      - ./mediamtx.yml:/mediamtx.yml
+    restart: unless-stopped
+
+  video-worker:
+    image: video-worker:V1.0.0
+    container_name: video-worker
+    build: .
+    env_file:
+      - .env
+    ports:
+      - "8081:8081"
+    network_mode: host
+    # deploy:
+    #   resources:
+    #     limits:
+    #       memory: 1024M    # Limit to 512 MB of memory
+    #       cpus: "2"     # Limit to 50% of a single CPU
+    #     reservations:
+    #       memory: 256M    # Reserve 256 MB of memory
+    #       cpus: "0.25"    # Reserve 25% of a single CPU
+  

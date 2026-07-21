@@ -1,3 +1,5 @@
+![Watchtower — distributed camera analytics control plane + edge worker fleet](assets/watchtower-banner.png)
+
 # Watchtower
 
 Distributed video analytics platform. A central **controller** orchestrates a fleet of

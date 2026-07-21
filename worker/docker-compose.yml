@@ -1,0 +1,53 @@
+version: "3.8"
+
+networks:
+  workers_net:
+    driver: bridge
+
+
+# Reusable base blocks (must use x- prefix)
+x-mediatx: &mtx_base
+  image: bluenviron/mediamtx:1.8.1
+  restart: unless-stopped
+  volumes:
+    - ./mediamtx.yml:/mediamtx.yml
+  networks: [workers_net]
+
+x-worker: &worker_base
+  image: video-worker:V1.0.0
+  build: .
+  restart: on-failure
+  env_file: [.env]
+  networks: [workers_net]
+  # network_mode: host
+
+services:
+  # ---------- Couple #1 ----------
+  mediamtx-1:
+    <<: *mtx_base
+    container_name: mediamtx-1
+    ports:
+      - "19997:9997"   # public API (controller will hit this) 
+      - "18889:8889"   # public WebRTC/viewer/signaling
+      - "8189:8189/udp"        # WebRTC ICE/UDP (IMPORTANT if using WebRTC)
+      - "8554:8554/udp"        # RTSP
+      - "8554:8554"        # RTSP
+      - "8000-8010:8000-8010/udp"
+      
+  worker-1:
+    <<: *worker_base
+    container_name: worker-1
+    depends_on: [mediamtx-1]
+    ports:
+      - "8081:8081"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      # Internal (container-to-container)
+      MTX_URL_INTERNAL: "http://mediamtx-1:9997/"
+      HOST_WORKER_URL: http://localhost:8081/
+      HOST_MTX_WEBRTC_URL: http://localhost:18889
+
+      # HOST_WORKER_URL="http://156.67.25.93:8081/"
+      # HOST_MTX_WEBRTC_URL="http://156.67.25.93:18889"
+

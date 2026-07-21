@@ -1,0 +1,47 @@
+---Video worker for getting camera streams, detect faces and post events, all in real-time---
+
+Current Implementation:
+
+- Multiprocessing with threading
+- Each stream is a seperate process running two threads:
+    - Thread for getting stream and put frames in a buffer
+    - Thread for processing frames in the buffer and posting events
+
+- Vidgears has been used as a streaming library, which is responsible for reading streams.
+- YuNet ONNX Implementation for face detection. It uses two models:
+    - Model for making predictions, and giving raw outputs 
+    - Model for postprocessing which does the nms
+
+
+Fixes in Version 3.0.1:
+- Handled stream inturruption by any cause e.g. Network failure, explicit stream termination etc. In that case, it will retry connecting the stream after fixed time.
+- Fixed Deregistration (which was getting stuck sometimes).
+- Deregistering API will always respond as success even a camera_id isn't found. (Required by Hamza).
+
+New:
+- Added to the SSOP DevOps
+- Added comprehensive ReadMe.md
+- CAMERA_RECONNECT_AFTER_SECS moved to config.env (env variable)
+
+
+
+
+
+
+########################################################################
+Webcam to rstp
+ffmpeg -f v4l2 -input_format mjpeg -framerate 30 -video_size 1280x720 -i /dev/video0 -vcodec copy -f rtsp rtsp://127.0.0.1:8554/webcam
+
+# local
+ffmpeg \
+  -f v4l2 -input_format mjpeg -framerate 30 -video_size 1280x720 -i /dev/video0 \
+  -vcodec libx264 -preset ultrafast -tune zerolatency -pix_fmt yuv420p \
+  -f rtsp -rtsp_transport tcp rtsp://127.0.0.1:8554/webcam
+
+
+# for prod
+ffmpeg \
+  -f v4l2 -input_format mjpeg -framerate 30 -video_size 1280x720 -i /dev/video0 \
+  -vcodec libx264 -preset ultrafast -tune zerolatency -pix_fmt yuv420p \
+  -f rtsp -rtsp_transport tcp rtsp://prod.priv.ae:8554/webcam
+

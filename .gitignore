@@ -1,0 +1,20 @@
+# Secrets — never commit. Use env.example as the template.
+.env
+**/.env
+!**/env.example
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Local state
+*.sqlite3
+logs/
+temp/
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store

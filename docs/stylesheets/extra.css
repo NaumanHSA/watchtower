@@ -1,0 +1,71 @@
+/* Watchtower brand colours for Material for MkDocs (same palette as the dashboard). */
+:root {
+  --wt-navy: #0b1b34;
+  --wt-navy-2: #173a6b;
+  --wt-teal: #0d9488;
+  --wt-teal-light: #2dd4bf;
+  --wt-blue: #2563eb;
+  --wt-orange: #f97316;
+}
+
+[data-md-color-scheme="default"] {
+  --md-primary-fg-color: var(--wt-navy);
+  --md-primary-fg-color--light: var(--wt-navy-2);
+  --md-primary-fg-color--dark: #07122a;
+  --md-primary-bg-color: #ffffff;
+  --md-primary-bg-color--light: rgb(255 255 255 / .7);
+  --md-accent-fg-color: var(--wt-teal);
+  --md-accent-fg-color--transparent: rgb(13 148 136 / .1);
+  --md-typeset-a-color: #0f766e;
+  --md-default-bg-color: #ffffff;
+}
+
+[data-md-color-scheme="slate"] {
+  --md-hue: 218;
+  --md-primary-fg-color: var(--wt-navy);
+  --md-primary-fg-color--light: var(--wt-navy-2);
+  --md-primary-fg-color--dark: #07122a;
+  --md-primary-bg-color: #ffffff;
+  --md-accent-fg-color: var(--wt-teal-light);
+  --md-accent-fg-color--transparent: rgb(45 212 191 / .1);
+  --md-typeset-a-color: var(--wt-teal-light);
+}
+
+.md-header, .md-tabs { background: linear-gradient(90deg, var(--wt-navy), var(--wt-navy-2)); }
+.md-header__button.md-logo img { height: 1.6rem; border-radius: 6px; }
+.md-typeset h1, .md-typeset h2 { font-weight: 700; letter-spacing: -0.02em; }
+.md-typeset table:not([class]) { font-size: .72rem; }
+.md-typeset .md-button { border-radius: 10px; }
+.md-typeset .md-button--primary { background: var(--wt-teal); border-color: var(--wt-teal); color: #fff; }
+.md-typeset .md-button--primary:hover { background: #0f766e; border-color: #0f766e; }
+
+/* ---- home page */
+.wt-hero {
+  margin: 0 0 1.6rem;
+  padding: 2rem 2.2rem;
+  border-radius: 18px;
+  border: 1px solid #d5f5ef;
+  background:
+    radial-gradient(600px 260px at 92% 0%, rgb(45 212 191 / .25), transparent 65%),
+    radial-gradient(520px 260px at 70% 120%, rgb(37 99 235 / .18), transparent 60%),
+    linear-gradient(120deg, #ffffff 0%, #f0fdfa 55%, #eff6ff 100%);
+}
+[data-md-color-scheme="slate"] .wt-hero {
+  border-color: rgb(45 212 191 / .25);
+  background:
+    radial-gradient(600px 260px at 92% 0%, rgb(45 212 191 / .18), transparent 65%),
+    linear-gradient(120deg, #0f1a2e 0%, #10243a 100%);
+}
+.md-typeset .wt-hero h1 { margin: 0 0 .6rem; font-size: 2rem; color: var(--md-default-fg-color); }
+.md-typeset .wt-hero h1 span { color: var(--wt-teal); }
+[data-md-color-scheme="slate"] .md-typeset .wt-hero h1 span { color: var(--wt-teal-light); }
+.wt-hero p { max-width: 46rem; font-size: .9rem; }
+.wt-hero .md-button { margin: .4rem .4rem 0 0; }
+
+.md-typeset .grid.cards > ul > li { border-radius: 14px; }
+.md-typeset .grid.cards .lg { color: var(--wt-teal); }
+
+.md-typeset .wt-shot img { border-radius: 12px; border: 1px solid var(--md-default-fg-color--lightest); box-shadow: 0 8px 28px rgb(15 23 42 / .08); }
+
+/* The home page opens with the hero; its "edit this page" button would sit on top of it. */
+.md-content__inner:has(> .wt-hero) > .md-content__button { display: none; }

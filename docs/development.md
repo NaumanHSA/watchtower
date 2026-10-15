@@ -46,6 +46,27 @@ publish it with any RTSP server, such as the dev stack's fake camera
 `docker compose -f deploy/compose/dev/compose.yml up --build`. The worker's frame
 reader also plays local files in real time and loops them, which the engine tests rely on.
 
+## Dashboard and documentation
+
+The dashboard is plain HTML, CSS and JavaScript in `controller/watchtower_controller/static/`:
+no build step and no third-party code. Run the controller with `uv run watchtower-controller`
+and reload the page after editing. Everything user-controlled must be inserted with
+`textContent`; the page is served under a strict Content Security Policy.
+
+This documentation is a [MkDocs](https://www.mkdocs.org/) site with the Material theme,
+configured in `mkdocs.yml` and published to GitHub Pages by `.github/workflows/docs.yml` on
+every push to `main` that touches it. Preview it while you write:
+
+```bash
+uv run --only-group docs mkdocs serve           # http://127.0.0.1:8000/watchtower/
+uv run --only-group docs mkdocs build --strict  # what CI runs: broken links fail the build
+```
+
+Link to other guides with relative paths (`[Results](results.md#encryption)`). Links to
+files outside `docs/` (`../deploy/compose`) work on GitHub as written; on the site a small
+hook (`docs/.hooks/github_links.py`) points them at the same file on GitHub. New pages must
+be added to `nav` in `mkdocs.yml`, or the strict build fails.
+
 ## Conventions
 
 - The protocol lives in `watchtower_contracts`. Add fields as optional with defaults;

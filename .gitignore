@@ -33,3 +33,6 @@ deploy/compose/dev/media/*
 
 # Local planning notes — never pushed
 .dev/
+
+# MkDocs build output
+/site/

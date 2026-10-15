@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/watchtower-banner.png" alt="Watchtower: distributed camera analytics, a control plane plus an edge worker fleet" width="100%">
+  <img src="docs/assets/watchtower-banner.png" alt="Watchtower: distributed camera analytics, a control plane plus an edge worker fleet" width="100%">
 </p>
 
 <p align="center">
@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <a href="docs/"><img alt="Docs" src="https://img.shields.io/badge/docs-read%20the%20guides-0d9488?style=for-the-badge&logo=readthedocs&logoColor=white"></a>
+  <a href="https://naumanhsa.github.io/watchtower/"><img alt="Documentation site" src="https://img.shields.io/badge/docs-naumanhsa.github.io-0d9488?style=for-the-badge&logo=materialformkdocs&logoColor=white"></a>
   <a href="pyproject.toml"><img alt="Python 3.11 | 3.12" src="https://img.shields.io/badge/python-3.11%20%7C%203.12-2563eb?style=for-the-badge&logo=python&logoColor=white"></a>
   <a href="LICENSE"><img alt="License: Apache 2.0" src="https://img.shields.io/badge/license-Apache%202.0-0b1b34?style=for-the-badge"></a>
   <a href="https://github.com/NaumanHSA/watchtower/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/NaumanHSA/watchtower/ci.yml?branch=main&style=for-the-badge&label=CI&logo=githubactions&logoColor=white"></a>
@@ -35,6 +35,7 @@
 </p>
 
 <p align="center">
+  <a href="https://naumanhsa.github.io/watchtower/"><b>Documentation</b></a> ·
   <a href="#-quick-start"><b>Quick start</b></a> ·
   <a href="#-screenshots">Screenshots</a> ·
   <a href="#-how-it-works">How it works</a> ·
@@ -118,21 +119,21 @@ The full list, including the 1.x bugs that were fixed, is in the [changelog](CHA
 ## 📸 Screenshots
 
 <p align="center">
-  <img src="assets/screenshots/overview.webp" alt="Overview: fleet health, cameras needing attention, workers and recent activity" width="100%">
+  <img src="docs/assets/screenshots/overview.webp" alt="Overview: fleet health, cameras needing attention, workers and recent activity" width="100%">
 </p>
 
 <table>
   <tr>
-    <td width="50%"><img src="assets/screenshots/cameras.webp" alt="Cameras: search, filter, start, stop, edit"><p align="center"><b>Cameras</b>: search, filter, start, stop, edit</p></td>
-    <td width="50%"><img src="assets/screenshots/live.webp" alt="Live view: a wall of WebRTC players"><p align="center"><b>Live view</b>: WebRTC straight from the worker</p></td>
+    <td width="50%"><img src="docs/assets/screenshots/cameras.webp" alt="Cameras: search, filter, start, stop, edit"><p align="center"><b>Cameras</b>: search, filter, start, stop, edit</p></td>
+    <td width="50%"><img src="docs/assets/screenshots/live.webp" alt="Live view: a wall of WebRTC players"><p align="center"><b>Live view</b>: WebRTC straight from the worker</p></td>
   </tr>
   <tr>
-    <td width="50%"><img src="assets/screenshots/workers.webp" alt="Workers: capacity, CPU, memory and delivery counters"><p align="center"><b>Workers</b>: capacity, load and delivery</p></td>
-    <td width="50%"><img src="assets/screenshots/add-camera.webp" alt="Add camera dialog with detection and delivery settings"><p align="center"><b>Add camera</b>: per-camera settings</p></td>
+    <td width="50%"><img src="docs/assets/screenshots/workers.webp" alt="Workers: capacity, CPU, memory and delivery counters"><p align="center"><b>Workers</b>: capacity, load and delivery</p></td>
+    <td width="50%"><img src="docs/assets/screenshots/add-camera.webp" alt="Add camera dialog with detection and delivery settings"><p align="center"><b>Add camera</b>: per-camera settings</p></td>
   </tr>
   <tr>
-    <td width="50%"><img src="assets/screenshots/activity.webp" alt="Activity: live events as they happen"><p align="center"><b>Activity</b>: live events</p></td>
-    <td width="50%"><img src="assets/screenshots/sign-in.webp" alt="Sign in with single sign-on or a token"><p align="center"><b>Sign in</b>: SSO or token</p></td>
+    <td width="50%"><img src="docs/assets/screenshots/activity.webp" alt="Activity: live events as they happen"><p align="center"><b>Activity</b>: live events</p></td>
+    <td width="50%"><img src="docs/assets/screenshots/sign-in.webp" alt="Sign in with single sign-on or a token"><p align="center"><b>Sign in</b>: SSO or token</p></td>
   </tr>
 </table>
 
@@ -198,7 +199,7 @@ curl -s -H "Authorization: Bearer $TOKEN" http://localhost:7000/api/v1/stats    
 ## 🏗️ How it works
 
 <p align="center">
-  <img src="assets/architecture.svg" alt="Architecture: your team uses the controller; workers sync with the controller, read cameras, send results to your application and live video to viewers" width="100%">
+  <img src="docs/assets/architecture.svg" alt="Architecture: your team uses the controller; workers sync with the controller, read cameras, send results to your application and live video to viewers" width="100%">
 </p>
 
 The key idea: **the controller never calls a worker.** Every worker opens the connection itself, so the
@@ -486,12 +487,22 @@ uv run watchtower-token-server
 
 A throwaway MongoDB for the tests: `docker run -d --rm -p 27018:27017 mongo:7`.
 
+Preview the documentation site while you edit `docs/` (MkDocs with Material, live reload):
+
+```bash
+uv run --only-group docs mkdocs serve      # http://127.0.0.1:8000/watchtower/
+uv run --only-group docs mkdocs build --strict   # what CI runs: fails on broken links
+```
+
 The dashboard lives in [`controller/watchtower_controller/static/`](controller/watchtower_controller/static/) and
 needs no build: edit and reload. More in [docs/development.md](docs/development.md).
 
 ---
 
 ## 📚 Documentation
+
+The guides live in [`docs/`](docs/) and are published as a website at
+**<https://naumanhsa.github.io/watchtower/>**, rebuilt from `main` on every change.
 
 | Guide | What's in it |
 |---|---|

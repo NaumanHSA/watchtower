@@ -9,6 +9,11 @@ dev = [
     "pytest-asyncio>=0.24",
     "ruff>=0.7",
 ]
+# The documentation site (mkdocs.yml). Not installed by default: `uv run --only-group docs mkdocs serve`.
+docs = [
+    "mkdocs>=1.6,<2",  # MkDocs 2.0 drops the plugin and theme systems Material depends on
+    "mkdocs-material>=9.6",
+]
 
 [tool.ruff]
 line-length = 120

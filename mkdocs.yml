@@ -1,0 +1,121 @@
+# Documentation site, published to GitHub Pages by .github/workflows/docs.yml.
+# Preview locally:  uv run --only-group docs mkdocs serve   →  http://127.0.0.1:8000
+site_name: Watchtower
+site_url: https://naumanhsa.github.io/watchtower/
+site_description: Real-time face detection across every camera, on workers you control.
+site_author: NaumanHSA and the Watchtower contributors
+repo_url: https://github.com/NaumanHSA/watchtower
+repo_name: NaumanHSA/watchtower
+edit_uri: edit/main/docs/
+copyright: Copyright &copy; 2026 NaumanHSA and the Watchtower contributors · Apache License 2.0
+
+docs_dir: docs
+# Files under docs/ that start with a dot (like .hooks/) are not published.
+hooks:
+  - docs/.hooks/github_links.py
+
+theme:
+  name: material
+  logo: assets/logo.svg
+  favicon: assets/logo.svg
+  icon:
+    repo: fontawesome/brands/github
+  font:
+    text: Inter
+    code: JetBrains Mono
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+  features:
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.sections
+    - navigation.top
+    - navigation.footer
+    - navigation.instant
+    - navigation.tracking
+    - toc.follow
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.action.edit
+    - content.tabs.link
+
+extra_css:
+  - stylesheets/extra.css
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/NaumanHSA/watchtower
+      name: Watchtower on GitHub
+
+markdown_extensions:
+  - abbr
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.keys
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+
+plugins:
+  - search
+
+# Fail the build (mkdocs build --strict) on broken links, broken anchors and pages left out of the nav.
+validation:
+  nav:
+    omitted_files: warn
+    not_found: warn
+  links:
+    not_found: warn
+    anchors: warn
+    unrecognized_links: warn
+
+nav:
+  - Home: index.md
+  - Concepts:
+      - Architecture: architecture.md
+  - Guides:
+      - Deployment: deployment.md
+      - Configuration: configuration.md
+      - Token servers and sign-in: token-server.md
+      - Results and delivery: results.md
+      - Privacy: privacy.md
+  - Reference:
+      - REST API: api.md
+  - Project:
+      - Development: development.md
+      - Upgrading from 1.x: upgrading-from-v1.md
+      - Changelog: https://github.com/NaumanHSA/watchtower/blob/main/CHANGELOG.md
+      - Contributing: https://github.com/NaumanHSA/watchtower/blob/main/CONTRIBUTING.md
+      - Security policy: https://github.com/NaumanHSA/watchtower/blob/main/SECURITY.md

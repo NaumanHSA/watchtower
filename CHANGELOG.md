@@ -31,7 +31,8 @@ A redesign of how the controller and workers cooperate. Not compatible with 1.x;
   plane and worker hosts, a Helm chart for Kubernetes, CI with tests, image builds, secret scanning and dependency
   audit, and image publishing on release tags.
 - Documentation for architecture, deployment, configuration, API, token servers,
-  results, privacy and development.
+  results, privacy and development, published as a website (MkDocs, Material theme) on GitHub Pages:
+  https://naumanhsa.github.io/watchtower/
 
 ### Fixed (relative to 1.x)
 - Results were never sent.

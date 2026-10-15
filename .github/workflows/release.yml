@@ -36,7 +36,7 @@ jobs:
             type=raw,value=latest
           labels: |
             org.opencontainers.image.title=watchtower-${{ matrix.service }}
-      - uses: docker/build-push-action@v6
+      - uses: docker/build-push-action@v7
         with:
           context: .
           file: ${{ matrix.service }}/Dockerfile

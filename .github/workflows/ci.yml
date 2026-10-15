@@ -1,0 +1,98 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "17 4 * * 1"  # weekly, so new advisories against pinned dependencies surface
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Lint and test
+    runs-on: ubuntu-latest
+    services:
+      mongo:
+        image: mongo:7
+        ports: ["27018:27017"]
+        options: >-
+          --health-cmd "mongosh --quiet --eval 'db.adminCommand(1)'"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - run: uv sync --all-packages --frozen
+      - run: uv run ruff check .
+      - run: uv run pytest -q
+        env:
+          TEST_MONGO_URI: mongodb://localhost:27018
+
+  images:
+    name: Build ${{ matrix.service }} image
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        service: [controller, worker, token-server]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ matrix.service }}/Dockerfile
+          push: false
+          load: true
+          tags: watchtower-${{ matrix.service }}:ci
+          cache-from: type=gha,scope=${{ matrix.service }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.service }}
+      - name: Vulnerability scan
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: watchtower-${{ matrix.service }}:ci
+          scanners: vuln
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          exit-code: "1"
+
+  helm:
+    name: Helm chart
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/setup-helm@v4
+      - name: Lint and render
+        run: |
+          set -- --set controller.mongoUri=mongodb://mongo:27017 --set worker.tokenSecret.name=wt-worker                  --set tokenServer.enabled=true --set controller.ingress.enabled=true --set worker.hostNetwork=true
+          helm lint deploy/helm/watchtower "$@"
+          helm template wt deploy/helm/watchtower "$@" > rendered.yaml
+      - name: Validate against Kubernetes schemas
+        run: docker run --rm -i ghcr.io/yannh/kubeconform:v0.6.7 -strict -summary < rendered.yaml
+
+  secrets:
+    name: Secret scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # scan the whole history, not just the last commit
+      - name: gitleaks
+        run: docker run --rm -v "$PWD:/repo" ghcr.io/gitleaks/gitleaks:v8.28.0 git /repo --redact --verbose
+
+  audit:
+    name: Dependency audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - run: uv export --all-packages --frozen --no-emit-workspace --format requirements-txt > requirements.lock.txt
+      - run: uvx pip-audit --requirement requirements.lock.txt --disable-pip --progress-spinner off

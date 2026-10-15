@@ -1,0 +1,138 @@
+{{- if .Values.controller.enabled }}
+{{- $name := printf "%s-controller" (include "watchtower.fullname" .) }}
+{{- $c := .Values.controller }}
+{{- if and (not $c.mongoUri) (not $c.existingSecret) }}
+{{- fail "controller.mongoUri (or MONGO_URI in controller.existingSecret) is required" }}
+{{- end }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $name }}
+  labels:
+    {{- include "watchtower.labels" . | nindent 4 }}
+    app.kubernetes.io/name: controller
+spec:
+  replicas: {{ $c.replicas }}
+  selector:
+    matchLabels:
+      {{- include "watchtower.selector" (dict "root" . "component" "controller") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "watchtower.labels" . | nindent 8 }}
+        app.kubernetes.io/name: controller
+      {{- with $c.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- include "watchtower.podSecurity" . | nindent 8 }}
+      containers:
+        - name: controller
+          image: {{ include "watchtower.image" (dict "root" . "service" "controller") }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 7000
+          env:
+            {{- if $c.mongoUri }}
+            - name: MONGO_URI
+              value: {{ $c.mongoUri | quote }}
+            {{- end }}
+            {{- if $c.redisUrl }}
+            - name: REDIS_URL
+              value: {{ $c.redisUrl | quote }}
+            {{- end }}
+            {{- if .Values.tokenServer.enabled }}
+            - name: TOKEN_SERVER_URL
+              value: {{ printf "http://%s-token-server:9000/v1/token/verify" (include "watchtower.fullname" .) | quote }}
+            {{- end }}
+            {{- include "watchtower.env" $c.env | nindent 12 }}
+          {{- with $c.existingSecret }}
+          envFrom:
+            - secretRef:
+                name: {{ . }}
+          {{- end }}
+          readinessProbe:
+            httpGet: {path: /readyz, port: http}
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: {path: /livez, port: http}
+            periodSeconds: 20
+          resources:
+            {{- toYaml $c.resources | nindent 12 }}
+          securityContext:
+            {{- include "watchtower.containerSecurity" . | nindent 12 }}
+            readOnlyRootFilesystem: true
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}
+      {{- with $c.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with $c.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with $c.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $name }}
+  labels:
+    {{- include "watchtower.labels" . | nindent 4 }}
+    app.kubernetes.io/name: controller
+spec:
+  type: {{ $c.service.type }}
+  selector:
+    {{- include "watchtower.selector" (dict "root" . "component" "controller") | nindent 4 }}
+  ports:
+    - name: http
+      port: {{ $c.service.port }}
+      targetPort: http
+{{- if $c.ingress.enabled }}
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ $name }}
+  labels:
+    {{- include "watchtower.labels" . | nindent 4 }}
+  {{- with $c.ingress.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- with $c.ingress.className }}
+  ingressClassName: {{ . }}
+  {{- end }}
+  {{- with $c.ingress.tls }}
+  tls:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  rules:
+    - host: {{ $c.ingress.host | quote }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ $name }}
+                port:
+                  name: http
+{{- end }}
+{{- end }}

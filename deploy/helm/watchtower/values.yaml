@@ -1,0 +1,84 @@
+# Images are published by the release workflow as ghcr.io/<owner>/watchtower-<service>.
+image:
+  registry: ghcr.io
+  owner: naumanhsa
+  tag: ""            # defaults to the chart's appVersion
+  pullPolicy: IfNotPresent
+imagePullSecrets: []
+
+controller:
+  enabled: true
+  replicas: 2        # one replica schedules at a time (lease in MongoDB); all serve the API
+  mongoUri: ""       # required, e.g. mongodb://mongo.db.svc:27017 (use existingSecret to keep credentials out of values)
+  redisUrl: ""       # recommended with replicas > 1, so every dashboard sees every event
+  # Settings as env vars (docs/configuration.md#controller). Put secrets in existingSecret.
+  env:
+    AUTH_PROVIDER: http
+    LOG_FORMAT: json
+  existingSecret: "" # Secret whose keys become env vars (MONGO_URI, STATIC_TOKENS, OIDC_* …)
+  resources:
+    requests: {cpu: 100m, memory: 128Mi}
+    limits: {memory: 512Mi}
+  service:
+    type: ClusterIP
+    port: 7000
+  ingress:
+    enabled: false
+    className: ""
+    host: watchtower.example.com
+    annotations: {}
+    tls: []          # [{secretName: watchtower-tls, hosts: [watchtower.example.com]}]
+  podAnnotations: {}
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+tokenServer:
+  enabled: false     # or point controller.env.TOKEN_SERVER_URL at your own token server
+  env:
+    TOKEN_SERVER_INGEST_ENABLED: "false"
+  existingSecret: "" # TOKEN_SERVER_ADMIN_KEY, TOKEN_SERVER_MASTER_KEY, TOKEN_SERVER_BOOTSTRAP_TOKENS …
+  persistence:
+    size: 1Gi
+    storageClass: ""
+  resources:
+    requests: {cpu: 50m, memory: 64Mi}
+    limits: {memory: 256Mi}
+
+worker:
+  enabled: true
+  replicas: 1
+  controllerUrl: ""  # defaults to the in-cluster controller service
+  tokenSecret:
+    name: ""         # required: a Secret holding a worker-role token
+    key: WATCHTOWER_TOKEN
+  maxStreams: 4
+  env:
+    DELIVERY_MODE: realtime
+    LOG_FORMAT: json
+  existingSecret: ""
+  persistence:       # identity + reliable-delivery spool, one volume per pod
+    size: 2Gi
+    storageClass: ""
+  # WebRTC media is UDP to the pod. hostNetwork is the simplest way to reach viewers:
+  # the worker advertises its node's IP. Otherwise expose 8889/8189 yourself (or use TURN)
+  # and set publicWebrtcUrl / publicHost.
+  hostNetwork: false
+  publicWebrtcUrl: ""   # e.g. http://203.0.113.10:8889; with hostNetwork defaults to http://<node IP>:8889
+  publicHost: ""        # address advertised for WebRTC media; with hostNetwork defaults to the node IP
+  resources:
+    requests: {cpu: 500m, memory: 512Mi}
+    limits: {memory: 2Gi}
+  mediamtx:
+    image: bluenviron/mediamtx:1.21.2
+    # MTX_* overrides, e.g. a TURN relay for viewers behind strict NAT:
+    #   MTX_WEBRTCICESERVERS2_0_URL: turn:turn.example.com:3478
+    #   MTX_WEBRTCICESERVERS2_0_USERNAME: watchtower
+    env: {}
+    existingSecret: ""  # e.g. holding MTX_WEBRTCICESERVERS2_0_PASSWORD
+    resources:
+      requests: {cpu: 50m, memory: 64Mi}
+      limits: {memory: 256Mi}
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}

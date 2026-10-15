@@ -1,91 +1,97 @@
 ![Watchtower — distributed camera analytics control plane + edge worker fleet](assets/watchtower-banner.png)
 
+Watchtower runs face detection on many camera streams across many machines, and
+sends each detection to your application as it happens. You add cameras in a web
+dashboard or through the API; a central **controller** decides which **worker**
+processes each camera, moves cameras off workers that fail, and lets people watch
+any camera live in the browser.
 
-Distributed video analytics platform. A central **controller** orchestrates a fleet of
-**workers**; each worker ingests camera streams, runs face detection in isolated
-processes, and publishes viewable streams over WebRTC via MediaMTX.
+- **Pull-based fleet.** Workers only make outbound connections, so they can run behind
+  NAT, on edge boxes, anywhere that can reach the controller. No inbound control port.
+- **Self-healing.** A worker that dies loses its cameras to healthy workers within a
+  lease (about 75 seconds); a worker that keeps running while the controller is down
+  keeps analysing. Crashed engines restart with backoff.
+- **Your choice of delivery.** Per camera: `realtime` (never late, drops stale results
+  under pressure) or `reliable` (spooled on disk, delivered in order, never lost).
+- **Encrypted results.** Detections can be encrypted to a key only you hold
+  (RSA-OAEP + AES-256-GCM).
+- **Bring your own identity.** Sign in through your identity provider (OpenID Connect:
+  Keycloak, Entra ID, Auth0, Okta…), use the token server in this repo, or point the
+  controller at your own service that answers one small [contract](docs/token-server.md).
+- **Live view.** WebRTC through [MediaMTX](https://github.com/bluenviron/mediamtx),
+  authorised per viewer.
 
-The two halves live in one repo but deploy independently.
+## Quick start
 
-```
-┌─────────────────┐         announce / heartbeat        ┌──────────────────┐
-│                 │ ◄────────────────────────────────── │  worker-1        │
-│   controller    │         stream assignments          │  + mediamtx      │
-│   (one deploy)  │ ──────────────────────────────────► │                  │
-│                 │                                     └──────────────────┘
-│   FastAPI       │ ◄────────────────────────────────── ┌──────────────────┐
-│   MongoDB       │                                     │  worker-N        │
-└─────────────────┘                                     │  (anywhere)      │
-                                                        └──────────────────┘
-```
-
-## Layout
-
-| Path | What it is | Deployment |
-|---|---|---|
-| [controller/](controller/) | Orchestrator: worker registry, stream assignment, health monitoring, failover, WebSocket notifications | Single deployment |
-| [worker/](worker/) | Stream processor: camera ingest, YuNet ONNX face detection, MediaMTX/WebRTC publishing | Many, anywhere |
-
-Each directory is self-contained — its own `Dockerfile`, `requirements.txt`,
-`docker-compose.yml`, and `.env`. Nothing at the repo root is needed to build or run
-either side.
-
-## Deploying the controller
-
-One instance, typically alongside MongoDB.
+You need Docker with Compose.
 
 ```bash
-cd controller
-cp env.example .env    # set MONGO_URI, WORKER_API_KEY, TOKEN_VERIFICATION_URL
-docker compose up -d --build
+git clone https://github.com/NaumanHSA/watchtower.git
+cd watchtower
+docker compose -f deploy/compose/dev/compose.yml up --build
 ```
 
-Listens on `:7000`. See [controller/README.md](controller/README.md).
+Open <http://localhost:7000> and sign in with `dev-admin-token`. Click **Add camera**
+and use `rtsp://camera:8554/cam1`, a fake camera the stack already runs. To see
+detections, put any video with faces at `deploy/compose/dev/media/sample.mp4` and
+restart the `camera-feed` service. Results are decrypted by the bundled token server
+and saved in its volume (`docker compose -f deploy/compose/dev/compose.yml logs -f token-server`).
 
-## Deploying a worker
+The dev stack uses fixed tokens and is for one machine only. To deploy for real, see
+[docs/deployment.md](docs/deployment.md).
 
-Run as many as you need, on any host that can reach the controller.
+## How it fits together
 
-```bash
-cd worker
-cp env.example .env    # set CONTROLLER_URL, HOST_WORKER_URL, HOST_MTX_WEBRTC_URL
-docker compose up -d --build
+```
+                     ┌────────────────────────────┐        ┌───────────────┐
+ dashboard / API ──► │ controller (1..N replicas)  │ ◄────► │ token server  │ yours, or token-server/
+ (bearer token)      │ REST · scheduler · events   │        └───────────────┘
+                     └─────────────▲──────────────┘ ◄── MongoDB
+                                   │ HTTPS, opened by the worker:
+                                   │ register once, then sync every few seconds
+                     ┌─────────────┴──────────────┐
+                     │ worker host                 │ ──► your results URL
+                     │  worker: one engine per     │     (realtime | reliable)
+                     │  camera, YuNet on ONNX       │
+                     │  MediaMTX: camera re-stream │ ──► viewers (WebRTC)
+                     └─────────────▲──────────────┘
+                                   │ RTSP
+                                cameras
 ```
 
-Two compose files are provided:
+Each sync, the worker reports what it is running and receives what it *should* run;
+it then starts and stops engine processes to match. The full design, including
+failure handling, is in [docs/architecture.md](docs/architecture.md).
 
-- `docker-compose.yml` — bridge network, worker + MediaMTX pair. Use for multiple
-  workers on one host.
-- `docker-compose-host.yml` — host networking. Use for a single worker per host.
+## Repository
 
-A worker announces itself to `CONTROLLER_URL` on startup and heartbeats periodically,
-so no controller-side registration is needed. See [worker/README.md](worker/README.md).
+| Path | What it is |
+|---|---|
+| [controller/](controller/) | Control plane: API, scheduler, dashboard (FastAPI, MongoDB) |
+| [worker/](worker/) | Worker agent, detection engine, result delivery (OpenCV, onnxruntime) |
+| [token-server/](token-server/) | Reference token server: issues and verifies tokens, holds result keys |
+| [packages/contracts/](packages/contracts/) | Protocol models shared by all of the above |
+| [deploy/](deploy/) | Docker Compose stacks, the Helm chart, the MediaMTX configuration |
+| [docs/](docs/) | Architecture, configuration, API, results format, operations |
 
-## Wiring the two sides
+## Documentation
 
-These must agree across both deployments:
+- [Architecture](docs/architecture.md): the pull protocol, scheduling, leases, failure modes
+- [Deployment](docs/deployment.md): production Compose stacks, TLS, networking, scaling
+- [Configuration](docs/configuration.md): every setting of every service
+- [API](docs/api.md): REST endpoints, roles, live events
+- [Token servers](docs/token-server.md): the contract, and using your own identity service
+- [Results](docs/results.md): payload format, encryption, delivery modes, decrypting
+- [Privacy](docs/privacy.md): what is stored and sent, and how to minimise it
+- [Development](docs/development.md): working on the code
+- [Upgrading from 1.x](docs/upgrading-from-v1.md)
 
-| Setting | Controller | Worker |
-|---|---|---|
-| Shared API key | `WORKER_API_KEY` | `WORKER_API_KEY` |
-| Controller address | — | `CONTROLLER_URL` |
-| Worker's externally reachable URL | discovered via announce | `HOST_WORKER_URL` |
-| Worker's WebRTC viewer URL | discovered via announce | `HOST_MTX_WEBRTC_URL` |
+## Contributing and security
 
-`HOST_WORKER_URL` and `HOST_MTX_WEBRTC_URL` must be addresses the **controller and
-viewers** can reach — not `localhost` — whenever the worker runs on a different host.
+See [CONTRIBUTING.md](CONTRIBUTING.md). Please report vulnerabilities privately as
+described in [SECURITY.md](SECURITY.md), not in public issues.
 
-## Repo history
+## License
 
-This repo was formed by merging two previously separate repositories with their full
-histories preserved:
-
-- `video-worker-controller` → `controller/`
-- `video-worker-for-controller` → `worker/`
-
-`git blame` and `git log` work normally on all existing lines. Because the files moved
-into subdirectories, path-scoped log needs `--follow` to cross the merge point:
-
-```bash
-git log --follow -- worker/main.py
-```
+Watchtower is open source under the [Apache License 2.0](LICENSE). Third-party
+components and their licenses are listed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

@@ -1,0 +1,44 @@
+# One worker host: the worker plus its MediaMTX.
+#
+#   cp .env.example .env        # then edit it
+#   docker compose up -d --build
+#
+# The worker only makes outbound calls (to the controller and the results URL). Inbound,
+# it needs WebRTC ports for live viewers: 8889/tcp for signalling and 8189 udp+tcp for media.
+name: watchtower-worker
+
+services:
+  # Owns the shared network namespace, like the pause container of a Kubernetes pod, so the
+  # worker and MediaMTX can each restart without stranding the other.
+  worker-net:
+    image: registry.k8s.io/pause:3.10
+    restart: unless-stopped
+    ports:
+      - "${HEALTH_BIND:-127.0.0.1}:8081:8081"  # health + Prometheus metrics
+      - "8889:8889"                              # WebRTC signalling (viewers)
+      - "8189:8189/udp"                          # WebRTC media
+      - "8189:8189/tcp"
+
+  worker:
+    build: {context: ../../.., dockerfile: worker/Dockerfile}
+    image: ${WORKER_IMAGE:-watchtower-worker:local}
+    restart: unless-stopped
+    network_mode: service:worker-net
+    depends_on: [worker-net]
+    env_file: .env
+    volumes: [worker-state:/var/lib/watchtower]
+    stop_grace_period: 30s  # time to drain: the controller moves streams before we exit
+
+  mediamtx:
+    image: bluenviron/mediamtx:1.21.2
+    restart: unless-stopped
+    network_mode: service:worker-net
+    depends_on: [worker-net]
+    volumes: ["../../mediamtx/mediamtx.yml:/mediamtx.yml:ro"]
+    env_file: .env  # MTX_* settings, e.g. a TURN server (see .env.example)
+    environment:
+      # The address viewers reach this host at; MediaMTX advertises it for WebRTC media.
+      MTX_WEBRTCADDITIONALHOSTS: ${PUBLIC_HOST:-127.0.0.1}
+
+volumes:
+  worker-state:

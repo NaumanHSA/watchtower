@@ -1,0 +1,11 @@
+apiVersion: v2
+name: watchtower
+description: Distributed camera analytics — controller, workers (with MediaMTX) and an optional token server
+type: application
+version: 2.0.0
+appVersion: "2.0.0"
+keywords: [video, face-detection, webrtc, mediamtx, edge]
+home: https://github.com/NaumanHSA/watchtower
+sources: [https://github.com/NaumanHSA/watchtower]
+annotations:
+  licenses: Apache-2.0

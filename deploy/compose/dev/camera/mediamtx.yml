@@ -1,0 +1,20 @@
+# A stand-in IP camera for local development: an RTSP server that anyone on the compose
+# network may publish to and read from. `camera-feed` publishes rtsp://camera:8554/cam1.
+logLevel: warn
+authMethod: internal
+authInternalUsers:
+  - user: any
+    pass:
+    ips: []
+    permissions:
+      - action: publish
+      - action: read
+api: false
+rtsp: true
+rtspTransports: [tcp]
+rtmp: false
+hls: false
+webrtc: false
+srt: false
+paths:
+  all_others:

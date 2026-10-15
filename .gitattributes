@@ -1,0 +1,8 @@
+# Normalise line endings: LF in the repository and in checkouts on every OS, so shell
+# scripts and configs mounted into Linux containers work from Windows checkouts too.
+* text=auto eol=lf
+
+*.onnx binary
+*.png binary
+*.jpg binary
+*.mp4 binary

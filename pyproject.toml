@@ -1,0 +1,36 @@
+# Workspace root. Each service is its own package; `uv sync --all-packages` installs
+# everything into one .venv for development. Images install only their own package.
+[tool.uv.workspace]
+members = ["packages/contracts", "controller", "worker", "token-server"]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3",
+    "pytest-asyncio>=0.24",
+    "ruff>=0.7",
+]
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+extend-exclude = ["**/weights"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "ASYNC", "S"]
+ignore = [
+    "S101",   # assert is fine in tests
+    "S104",   # binding to 0.0.0.0 is intended inside containers
+    "B008",   # FastAPI's Depends() in defaults
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["watchtower_contracts", "watchtower_controller", "watchtower_worker", "watchtower_token_server"]
+
+[tool.ruff.lint.per-file-ignores]
+"**/tests/**" = ["S105", "S106", "S108", "S311"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+testpaths = ["tests", "packages/contracts/tests", "controller/tests", "worker/tests", "token-server/tests"]
+filterwarnings = ["ignore:Using `httpx` with `starlette.testclient` is deprecated"]

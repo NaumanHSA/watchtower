@@ -1,0 +1,83 @@
+{{- if .Values.tokenServer.enabled }}
+{{- $name := printf "%s-token-server" (include "watchtower.fullname" .) }}
+{{- $t := .Values.tokenServer }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $name }}
+  labels:
+    {{- include "watchtower.labels" . | nindent 4 }}
+    app.kubernetes.io/name: token-server
+spec:
+  selector:
+    {{- include "watchtower.selector" (dict "root" . "component" "token-server") | nindent 4 }}
+  ports:
+    - name: http
+      port: 9000
+      targetPort: http
+---
+# One replica: the token store is a file on its volume.
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ $name }}
+  labels:
+    {{- include "watchtower.labels" . | nindent 4 }}
+    app.kubernetes.io/name: token-server
+spec:
+  serviceName: {{ $name }}
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "watchtower.selector" (dict "root" . "component" "token-server") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "watchtower.labels" . | nindent 8 }}
+        app.kubernetes.io/name: token-server
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- include "watchtower.podSecurity" . | nindent 8 }}
+      containers:
+        - name: token-server
+          image: {{ include "watchtower.image" (dict "root" . "service" "token-server") }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 9000
+          env:
+            {{- include "watchtower.env" $t.env | nindent 12 }}
+          {{- with $t.existingSecret }}
+          envFrom:
+            - secretRef:
+                name: {{ . }}
+          {{- end }}
+          readinessProbe:
+            httpGet: {path: /livez, port: http}
+          livenessProbe:
+            httpGet: {path: /livez, port: http}
+            periodSeconds: 20
+          resources:
+            {{- toYaml $t.resources | nindent 12 }}
+          securityContext:
+            {{- include "watchtower.containerSecurity" . | nindent 12 }}
+            readOnlyRootFilesystem: true
+          volumeMounts:
+            - name: data
+              mountPath: /data
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: [ReadWriteOnce]
+        {{- with $t.persistence.storageClass }}
+        storageClassName: {{ . }}
+        {{- end }}
+        resources:
+          requests:
+            storage: {{ $t.persistence.size }}
+{{- end }}

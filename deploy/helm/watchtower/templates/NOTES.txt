@@ -1,0 +1,27 @@
+Watchtower {{ .Chart.AppVersion }} is installed.
+
+{{- if .Values.controller.enabled }}
+Dashboard and API:
+{{- if .Values.controller.ingress.enabled }}
+  https://{{ .Values.controller.ingress.host }}/
+{{- else }}
+  kubectl port-forward svc/{{ include "watchtower.fullname" . }}-controller 7000:{{ .Values.controller.service.port }}
+  then open http://localhost:7000/
+{{- end }}
+{{- end }}
+{{- if .Values.tokenServer.enabled }}
+
+Issue tokens:
+  kubectl exec statefulset/{{ include "watchtower.fullname" . }}-token-server -- watchtower-token-server issue --role admin --subject you
+{{- end }}
+{{- if and .Values.worker.enabled (not .Values.worker.hostNetwork) (not .Values.worker.publicWebrtcUrl) }}
+
+Live view is not reachable yet: workers analyse cameras, but viewers need a route to
+each worker's WebRTC ports. Set worker.hostNetwork=true, or expose 8889/tcp and
+8189/udp+tcp and set worker.publicWebrtcUrl and worker.publicHost.
+{{- end }}
+{{- if and .Values.controller.enabled (gt (int .Values.controller.replicas) 1) (not .Values.controller.redisUrl) }}
+
+Note: controller.replicas > 1 without controller.redisUrl — dashboards only see live
+events from the replica they are connected to.
+{{- end }}

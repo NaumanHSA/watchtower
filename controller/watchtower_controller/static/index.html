@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Watchtower</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='13' fill='%232563eb'/%3E%3Ccircle cx='16' cy='16' r='5' fill='white'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="app.css">
+</head>
+<body>
+  <div id="login" class="login" hidden>
+    <form id="login-form" class="card login-card">
+      <h1>Watchtower</h1>
+      <p class="muted">Sign in with an access token from your token server.</p>
+      <button type="button" id="sso" class="primary" hidden>Sign in with SSO</button>
+      <p id="sso-or" class="muted divider" hidden>or paste a token</p>
+      <label>Token
+        <input id="login-token" type="password" autocomplete="off" required spellcheck="false">
+      </label>
+      <label class="check"><input id="login-remember" type="checkbox"> Remember on this device</label>
+      <p id="login-error" class="error" role="alert"></p>
+      <button type="submit" class="primary">Sign in</button>
+    </form>
+  </div>
+
+  <div id="app" hidden>
+    <header class="topbar">
+      <div class="brand"><span class="dot" aria-hidden="true"></span> Watchtower</div>
+      <nav class="tabs" role="tablist">
+        <button role="tab" data-tab="streams" aria-selected="true">Cameras</button>
+        <button role="tab" data-tab="workers" aria-selected="false">Workers</button>
+        <button role="tab" data-tab="audit" aria-selected="false" data-min-role="admin">Audit</button>
+      </nav>
+      <div class="who">
+        <span id="live" class="live" title="Live updates">offline</span>
+        <span id="whoami" class="muted"></span>
+        <button id="logout" class="ghost">Sign out</button>
+      </div>
+    </header>
+
+    <main>
+      <section class="stats" id="stats" aria-label="Summary"></section>
+
+      <section id="tab-streams" class="tab">
+        <div class="toolbar">
+          <h2>Cameras</h2>
+          <button id="add-stream" class="primary" data-min-role="operator">Add camera</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Name</th><th>Status</th><th>Worker</th><th>FPS</th><th>Details</th><th class="actions">Actions</th></tr></thead>
+            <tbody id="streams"></tbody>
+          </table>
+        </div>
+        <p id="streams-empty" class="empty" hidden>No cameras yet.</p>
+      </section>
+
+      <section id="tab-workers" class="tab" hidden>
+        <div class="toolbar"><h2>Workers</h2></div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Name</th><th>State</th><th>Streams</th><th>Load</th><th>Results</th><th>Last seen</th><th class="actions">Actions</th></tr></thead>
+            <tbody id="workers"></tbody>
+          </table>
+        </div>
+        <p id="workers-empty" class="empty" hidden>No workers have registered. Start one with a worker token.</p>
+      </section>
+
+      <section id="tab-audit" class="tab" hidden>
+        <div class="toolbar"><h2>Audit log</h2><span class="muted">Latest 200 changes</span></div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>When</th><th>Who</th><th>Action</th><th>Target</th><th>Details</th></tr></thead>
+            <tbody id="audit"></tbody>
+          </table>
+        </div>
+        <p id="audit-empty" class="empty" hidden>Nothing recorded yet.</p>
+      </section>
+    </main>
+  </div>
+
+  <dialog id="stream-dialog">
+    <form id="stream-form" method="dialog">
+      <h2 id="stream-dialog-title">Add camera</h2>
+      <div class="grid">
+        <label>Name <input name="name" required maxlength="200"></label>
+        <label>Location <input name="location" maxlength="200"></label>
+        <label class="wide">Source URL
+          <input name="source_url" placeholder="rtsp://user:password@camera.local:554/stream" maxlength="2048">
+          <small id="source-hint" class="muted"></small>
+        </label>
+        <label>Frames per second <input name="fps" type="number" min="1" max="60"></label>
+        <label>Detector size
+          <select name="detector_resolution"><option>320</option><option>416</option><option>512</option><option>640</option></select>
+        </label>
+        <label>Min. confidence <input name="detection_confidence" type="number" step="0.01" min="0" max="1"></label>
+        <label>Result every (ms) <input name="results_interval_ms" type="number" min="100" max="120000" step="100"></label>
+        <label>Snapshot
+          <select name="snapshot"><option value="best">best</option><option value="first">first</option><option value="last">last</option></select>
+        </label>
+        <label>Delivery
+          <select name="delivery_mode">
+            <option value="">worker default</option>
+            <option value="realtime">realtime (never late)</option>
+            <option value="reliable">reliable (never lost)</option>
+          </select>
+        </label>
+        <label class="wide">Results URL <input name="results_url" placeholder="default from the controller" maxlength="2048"></label>
+        <label class="check wide"><input name="include_frame" type="checkbox"> Send the full frame with each result</label>
+        <label class="wide">Metadata (JSON) <textarea name="metadata" rows="3" spellcheck="false">{}</textarea></label>
+      </div>
+      <p id="stream-error" class="error" role="alert"></p>
+      <div class="dialog-actions">
+        <button type="button" class="ghost" data-close>Cancel</button>
+        <button type="submit" class="primary" id="stream-submit">Save</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="view-dialog" class="view-dialog">
+    <div class="view-head">
+      <h2 id="view-title">Live</h2>
+      <button type="button" class="ghost" data-close>Close</button>
+    </div>
+    <video id="view-video" autoplay muted playsinline controls></video>
+    <p id="view-status" class="muted"></p>
+  </dialog>
+
+  <div id="toasts" class="toasts" aria-live="polite"></div>
+  <script type="module" src="app.js"></script>
+</body>
+</html>

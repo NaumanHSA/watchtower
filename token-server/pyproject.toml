@@ -1,0 +1,28 @@
+[project]
+name = "watchtower-token-server"
+version = "2.0.0"
+description = "Reference token server for Watchtower: issues tokens, verifies them, holds result-encryption keys"
+readme = "README.md"
+license = "Apache-2.0"
+requires-python = ">=3.11"
+dependencies = [
+    "watchtower-contracts[crypto]",
+    "fastapi>=0.115",
+    "uvicorn>=0.30",
+    "httpx>=0.27",
+    "pydantic-settings>=2.5",
+    "cryptography>=43",
+]
+
+[project.scripts]
+watchtower-token-server = "watchtower_token_server.__main__:main"
+
+[tool.uv.sources]
+watchtower-contracts = { workspace = true }
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["watchtower_token_server"]

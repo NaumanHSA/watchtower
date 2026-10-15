@@ -1,0 +1,178 @@
+{{- if .Values.worker.enabled }}
+{{- $name := printf "%s-worker" (include "watchtower.fullname" .) }}
+{{- $w := .Values.worker }}
+{{- if not $w.tokenSecret.name }}
+{{- fail "worker.tokenSecret.name is required: a Secret holding a worker-role token" }}
+{{- end }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ $name }}-mediamtx
+  labels:
+    {{- include "watchtower.labels" . | nindent 4 }}
+data:
+  mediamtx.yml: |
+    {{- .Files.Get "files/mediamtx.yml" | nindent 4 }}
+---
+# Headless: stable pod identities, and a target for scraping /metrics.
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $name }}
+  labels:
+    {{- include "watchtower.labels" . | nindent 4 }}
+    app.kubernetes.io/name: worker
+spec:
+  clusterIP: None
+  selector:
+    {{- include "watchtower.selector" (dict "root" . "component" "worker") | nindent 4 }}
+  ports:
+    - name: health
+      port: 8081
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ $name }}
+  labels:
+    {{- include "watchtower.labels" . | nindent 4 }}
+    app.kubernetes.io/name: worker
+spec:
+  serviceName: {{ $name }}
+  replicas: {{ $w.replicas }}
+  podManagementPolicy: Parallel
+  selector:
+    matchLabels:
+      {{- include "watchtower.selector" (dict "root" . "component" "worker") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "watchtower.labels" . | nindent 8 }}
+        app.kubernetes.io/name: worker
+      annotations:
+        checksum/mediamtx: {{ .Files.Get "files/mediamtx.yml" | sha256sum }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- if $w.hostNetwork }}
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      {{- end }}
+      # On SIGTERM the worker reports `draining` and the controller moves its cameras.
+      terminationGracePeriodSeconds: 30
+      securityContext:
+        {{- include "watchtower.podSecurity" . | nindent 8 }}
+      containers:
+        # Containers in a pod share the network namespace, which is what MediaMTX's
+        # config expects: its API and RTSP server stay on localhost.
+        - name: worker
+          image: {{ include "watchtower.image" (dict "root" . "service" "worker") }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: health
+              containerPort: 8081
+          env:
+            - name: NODE_IP
+              valueFrom: {fieldRef: {fieldPath: status.hostIP}}
+            - name: WORKER_NAME
+              valueFrom: {fieldRef: {fieldPath: metadata.name}}
+            - name: CONTROLLER_URL
+              value: {{ $w.controllerUrl | default (printf "http://%s-controller:%v" (include "watchtower.fullname" .) .Values.controller.service.port) | quote }}
+            - name: WATCHTOWER_TOKEN
+              valueFrom:
+                secretKeyRef: {name: {{ $w.tokenSecret.name }}, key: {{ $w.tokenSecret.key }}}
+            - name: MAX_STREAMS
+              value: {{ $w.maxStreams | quote }}
+            - name: STATE_DIR
+              value: /var/lib/watchtower
+            {{- if $w.publicWebrtcUrl }}
+            - name: PUBLIC_WEBRTC_URL
+              value: {{ $w.publicWebrtcUrl | quote }}
+            {{- else if $w.hostNetwork }}
+            - name: PUBLIC_WEBRTC_URL
+              value: "http://$(NODE_IP):8889"
+            {{- end }}
+            {{- include "watchtower.env" $w.env | nindent 12 }}
+          {{- with $w.existingSecret }}
+          envFrom:
+            - secretRef:
+                name: {{ . }}
+          {{- end }}
+          readinessProbe:
+            httpGet: {path: /readyz, port: health}
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: {path: /livez, port: health}
+            periodSeconds: 20
+          resources:
+            {{- toYaml $w.resources | nindent 12 }}
+          securityContext:
+            {{- include "watchtower.containerSecurity" . | nindent 12 }}
+          volumeMounts:
+            - name: state
+              mountPath: /var/lib/watchtower
+        - name: mediamtx
+          image: {{ $w.mediamtx.image }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: webrtc
+              containerPort: 8889
+            - name: webrtc-udp
+              containerPort: 8189
+              protocol: UDP
+            - name: webrtc-tcp
+              containerPort: 8189
+          env:
+            - name: NODE_IP
+              valueFrom: {fieldRef: {fieldPath: status.hostIP}}
+            {{- if $w.publicHost }}
+            - name: MTX_WEBRTCADDITIONALHOSTS
+              value: {{ $w.publicHost | quote }}
+            {{- else if $w.hostNetwork }}
+            - name: MTX_WEBRTCADDITIONALHOSTS
+              value: "$(NODE_IP)"
+            {{- end }}
+            {{- include "watchtower.env" $w.mediamtx.env | nindent 12 }}
+          {{- with $w.mediamtx.existingSecret }}
+          envFrom:
+            - secretRef:
+                name: {{ . }}
+          {{- end }}
+          resources:
+            {{- toYaml $w.mediamtx.resources | nindent 12 }}
+          securityContext:
+            {{- include "watchtower.containerSecurity" . | nindent 12 }}
+          volumeMounts:
+            - name: mediamtx-config
+              mountPath: /mediamtx.yml
+              subPath: mediamtx.yml
+      volumes:
+        - name: mediamtx-config
+          configMap:
+            name: {{ $name }}-mediamtx
+      {{- with $w.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with $w.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with $w.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+  volumeClaimTemplates:
+    - metadata:
+        name: state
+      spec:
+        accessModes: [ReadWriteOnce]
+        {{- with $w.persistence.storageClass }}
+        storageClassName: {{ . }}
+        {{- end }}
+        resources:
+          requests:
+            storage: {{ $w.persistence.size }}
+{{- end }}

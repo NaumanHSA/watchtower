@@ -1,0 +1,56 @@
+# The control plane: controller + MongoDB, optionally the bundled token server and HTTPS.
+#
+#   cp .env.example .env        # then edit it
+#   docker compose up -d --build                                 # controller + MongoDB
+#   docker compose --profile token-server up -d --build          # + the reference token server
+#   docker compose --profile token-server --profile tls up -d    # + automatic HTTPS (Caddy)
+#
+# Workers (deploy/compose/worker) only need to reach the controller over HTTP(S).
+name: watchtower-controller
+
+services:
+  mongo:
+    image: mongo:7
+    restart: unless-stopped
+    volumes: [mongo-data:/data/db]
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  controller:
+    build: {context: ../../.., dockerfile: controller/Dockerfile}
+    image: ${CONTROLLER_IMAGE:-watchtower-controller:local}
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      MONGO_URI: ${MONGO_URI:-mongodb://mongo:27017}
+    depends_on:
+      mongo: {condition: service_healthy}
+    ports: ["${CONTROLLER_BIND:-0.0.0.0}:${CONTROLLER_PORT:-7000}:7000"]
+
+  token-server:
+    profiles: [token-server]
+    build: {context: ../../.., dockerfile: token-server/Dockerfile}
+    image: ${TOKEN_SERVER_IMAGE:-watchtower-token-server:local}
+    restart: unless-stopped
+    env_file: .env
+    volumes: [tokens:/data]
+    # Reachable by the controller on the compose network; publish it only if receivers
+    # elsewhere need it, e.g. ports: ["127.0.0.1:9000:9000"]
+
+  caddy:
+    profiles: [tls]
+    image: caddy:2
+    restart: unless-stopped
+    environment:
+      DOMAIN: ${DOMAIN:-localhost}
+    command: caddy reverse-proxy --from ${DOMAIN:-localhost} --to controller:7000
+    ports: ["80:80", "443:443"]
+    volumes: [caddy-data:/data]
+
+volumes:
+  mongo-data:
+  tokens:
+  caddy-data:

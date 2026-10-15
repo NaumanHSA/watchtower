@@ -1,0 +1,45 @@
+# MediaMTX next to a Watchtower worker (tested with MediaMTX 1.21).
+#
+# It must share the worker's network namespace (Compose: `network_mode: service:worker`,
+# Kubernetes: a sidecar in the worker pod), so 127.0.0.1 is the worker itself:
+#   - the worker manages paths through the API on 127.0.0.1:9997 (not exposed);
+#   - the engine reads each camera through RTSP on 127.0.0.1:8554 (one camera connection);
+#   - viewers watch over WebRTC on :8889, authorised per request by the worker, which asks
+#     the controller to check the viewer's token.
+# Any key can be overridden with an MTX_<KEY> environment variable, e.g.
+# MTX_WEBRTCADDITIONALHOSTS=203.0.113.10 to advertise this host's public address.
+
+logLevel: info
+
+authMethod: http
+authHTTPAddress: http://127.0.0.1:8081/mediamtx/auth
+authHTTPExclude:
+  - action: api
+  - action: metrics
+  - action: pprof
+
+api: true
+apiAddress: 127.0.0.1:9997
+metrics: false
+pprof: false
+playback: false
+
+rtsp: true
+rtspAddress: 127.0.0.1:8554
+rtspTransports: [tcp]
+rtmp: false
+hls: false
+srt: false
+
+webrtc: true
+webrtcAddress: :8889
+webrtcLocalUDPAddress: :8189
+webrtcLocalTCPAddress: :8189
+webrtcIPsFromInterfaces: true
+webrtcAdditionalHosts: []
+
+pathDefaults:
+  source: publisher
+
+paths:
+  all_others:

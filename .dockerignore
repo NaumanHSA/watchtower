@@ -1,0 +1,23 @@
+# Build context is the repo root (images need packages/contracts). Keep it small and
+# keep secrets and local state out of images.
+.git
+.github
+.dev
+.venv
+**/.venv
+**/__pycache__
+**/*.py[cod]
+**/.pytest_cache
+**/.ruff_cache
+**/.env
+**/.env.*
+!**/.env.example
+**/data
+**/.state
+**/*.sqlite3
+**/tests
+deploy
+docs
+assets
+*.md
+!**/README.md

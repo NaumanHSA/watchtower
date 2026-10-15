@@ -1,0 +1,7 @@
+Watchtower
+Copyright 2026 NaumanHSA and the Watchtower contributors
+
+This product is licensed under the Apache License, Version 2.0 (see LICENSE).
+
+It includes YuNet face detection models from the OpenCV Zoo project, licensed under
+the MIT License, Copyright (c) 2020 Shiqi Yu. See THIRD_PARTY_NOTICES.md.

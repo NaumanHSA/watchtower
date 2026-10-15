@@ -1,0 +1,103 @@
+# Watchtower on one machine, for trying it out and for development.
+#
+#   docker compose -f deploy/compose/dev/compose.yml up --build
+#
+# Then open http://localhost:7000 and log in with the admin token below
+# (dev-admin-token unless you set ADMIN_TOKEN). A fake camera is already running at
+# rtsp://camera:8554/cam1; drop an .mp4 with faces at deploy/compose/dev/media/sample.mp4
+# to see detections. Results are decrypted by the token server and saved under its volume.
+#
+# The tokens here are for local use only. Never reuse them on a reachable host.
+name: watchtower-dev
+
+services:
+  mongo:
+    image: mongo:7
+    restart: unless-stopped
+    volumes: [mongo-data:/data/db]
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  token-server:
+    build: {context: ../../.., dockerfile: token-server/Dockerfile}
+    image: watchtower-token-server:dev
+    restart: unless-stopped
+    environment:
+      TOKEN_SERVER_BOOTSTRAP_TOKENS: >-
+        admin:${ADMIN_TOKEN:-dev-admin-token}:dev-admin,viewer:${VIEWER_TOKEN:-dev-viewer-token}:dev-viewer,worker:${WORKER_TOKEN:-dev-worker-token}:dev-worker
+      TOKEN_SERVER_INGEST_ENABLED: "true"  # also act as the results receiver
+      TOKEN_SERVER_SAVE_IMAGES_DIR: /data/results
+    volumes: [tokens:/data]
+    ports: ["127.0.0.1:9000:9000"]
+
+  controller:
+    build: {context: ../../.., dockerfile: controller/Dockerfile}
+    image: watchtower-controller:dev
+    restart: unless-stopped
+    depends_on:
+      mongo: {condition: service_healthy}
+      token-server: {condition: service_started}
+    environment:
+      MONGO_URI: mongodb://mongo:27017
+      AUTH_PROVIDER: http
+      TOKEN_SERVER_URL: http://token-server:9000/v1/token/verify
+      RESULTS_URL: http://token-server:9000/v1/ingest
+    ports: ["127.0.0.1:7000:7000"]
+
+  # The worker and its MediaMTX share one network namespace (MediaMTX's API and RTSP
+  # server stay on localhost). A pause container owns that namespace, as in a Kubernetes
+  # pod, so either of them can crash and restart without stranding the other.
+  worker-net:
+    image: registry.k8s.io/pause:3.10
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8081:8081"    # worker health/metrics
+      - "127.0.0.1:8889:8889"    # WebRTC (viewers)
+      - "127.0.0.1:8189:8189/udp"
+      - "127.0.0.1:8189:8189/tcp"
+
+  worker:
+    build: {context: ../../.., dockerfile: worker/Dockerfile}
+    image: watchtower-worker:dev
+    restart: unless-stopped
+    network_mode: service:worker-net
+    depends_on: [worker-net, controller]
+    environment:
+      CONTROLLER_URL: http://controller:7000
+      WATCHTOWER_TOKEN: ${WORKER_TOKEN:-dev-worker-token}
+      WORKER_NAME: dev-worker-1
+      MAX_STREAMS: "4"
+      PUBLIC_WEBRTC_URL: http://localhost:8889
+      DELIVERY_MODE: reliable
+    volumes: [worker-state:/var/lib/watchtower]
+
+  mediamtx:
+    image: bluenviron/mediamtx:1.21.2
+    restart: unless-stopped
+    network_mode: service:worker-net
+    depends_on: [worker-net]
+    volumes: ["../../mediamtx/mediamtx.yml:/mediamtx.yml:ro"]
+    environment:
+      MTX_WEBRTCADDITIONALHOSTS: 127.0.0.1  # so a browser on this machine can reach the media port
+
+  camera:
+    image: bluenviron/mediamtx:1.21.2
+    restart: unless-stopped
+    volumes: ["./camera/mediamtx.yml:/mediamtx.yml:ro"]
+
+  camera-feed:
+    image: bluenviron/mediamtx:1.21.2-ffmpeg
+    restart: unless-stopped
+    depends_on: [camera]
+    entrypoint: ["/bin/sh", "/feed.sh"]
+    volumes:
+      - "./camera/feed.sh:/feed.sh:ro"
+      - "./media:/media:ro"
+
+volumes:
+  mongo-data:
+  tokens:
+  worker-state:

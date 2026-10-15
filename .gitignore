@@ -1,20 +1,35 @@
-# Secrets — never commit. Use env.example as the template.
+# Secrets — never commit. Use the .env.example files as templates.
 .env
 **/.env
-!**/env.example
+!**/.env.example
 
 # Python
 __pycache__/
 *.py[cod]
 .venv/
 venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+build/
+dist/
+*.egg-info/
 
-# Local state
+# Local state: worker identity + result spool, token store (holds private keys)
+.state/
+data/
+token-server/data/
 *.sqlite3
 logs/
-temp/
+
+# Sample media for the dev fake camera
+deploy/compose/dev/media/*
+!deploy/compose/dev/media/README.txt
 
 # Editors / OS
 .vscode/
 .idea/
 .DS_Store
+
+# Local planning notes — never pushed
+.dev/

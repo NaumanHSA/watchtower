@@ -3,127 +3,152 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
   <title>Watchtower</title>
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='13' fill='%232563eb'/%3E%3Ccircle cx='16' cy='16' r='5' fill='white'/%3E%3C/svg%3E">
+  <link rel="icon" href="logo.svg" type="image/svg+xml">
   <link rel="stylesheet" href="app.css">
 </head>
 <body>
-  <div id="login" class="login" hidden>
-    <form id="login-form" class="card login-card">
-      <h1>Watchtower</h1>
-      <p class="muted">Sign in with an access token from your token server.</p>
-      <button type="button" id="sso" class="primary" hidden>Sign in with SSO</button>
-      <p id="sso-or" class="muted divider" hidden>or paste a token</p>
-      <label>Token
-        <input id="login-token" type="password" autocomplete="off" required spellcheck="false">
-      </label>
-      <label class="check"><input id="login-remember" type="checkbox"> Remember on this device</label>
-      <p id="login-error" class="error" role="alert"></p>
-      <button type="submit" class="primary">Sign in</button>
-    </form>
-  </div>
-
-  <div id="app" hidden>
-    <header class="topbar">
-      <div class="brand"><span class="dot" aria-hidden="true"></span> Watchtower</div>
-      <nav class="tabs" role="tablist">
-        <button role="tab" data-tab="streams" aria-selected="true">Cameras</button>
-        <button role="tab" data-tab="workers" aria-selected="false">Workers</button>
-        <button role="tab" data-tab="audit" aria-selected="false" data-min-role="admin">Audit</button>
-      </nav>
-      <div class="who">
-        <span id="live" class="live" title="Live updates">offline</span>
-        <span id="whoami" class="muted"></span>
-        <button id="logout" class="ghost">Sign out</button>
+  <!-- ============================================================ sign in -->
+  <div id="login" class="auth" hidden>
+    <section class="auth-brand" aria-hidden="true">
+      <div class="auth-brand-inner">
+        <div class="brand brand-lg"><img src="logo.svg" alt="" width="44" height="44"><span>Watchtower</span></div>
+        <h1>Face detection across every camera, on workers you control.</h1>
+        <p>Add cameras, and Watchtower places each one on a worker, keeps it running through failures, delivers
+          every detection to your application, and lets your team watch any camera live.</p>
+        <ul class="auth-points">
+          <li><span class="dot teal"></span>Workers anywhere: behind NAT, on the edge, in the cloud</li>
+          <li><span class="dot blue"></span>Self-healing fleet with automatic failover</li>
+          <li><span class="dot orange"></span>Encrypted results, real time or guaranteed delivery</li>
+        </ul>
       </div>
-    </header>
-
-    <main>
-      <section class="stats" id="stats" aria-label="Summary"></section>
-
-      <section id="tab-streams" class="tab">
-        <div class="toolbar">
-          <h2>Cameras</h2>
-          <button id="add-stream" class="primary" data-min-role="operator">Add camera</button>
-        </div>
-        <div class="table-wrap">
-          <table>
-            <thead><tr><th>Name</th><th>Status</th><th>Worker</th><th>FPS</th><th>Details</th><th class="actions">Actions</th></tr></thead>
-            <tbody id="streams"></tbody>
-          </table>
-        </div>
-        <p id="streams-empty" class="empty" hidden>No cameras yet.</p>
-      </section>
-
-      <section id="tab-workers" class="tab" hidden>
-        <div class="toolbar"><h2>Workers</h2></div>
-        <div class="table-wrap">
-          <table>
-            <thead><tr><th>Name</th><th>State</th><th>Streams</th><th>Load</th><th>Results</th><th>Last seen</th><th class="actions">Actions</th></tr></thead>
-            <tbody id="workers"></tbody>
-          </table>
-        </div>
-        <p id="workers-empty" class="empty" hidden>No workers have registered. Start one with a worker token.</p>
-      </section>
-
-      <section id="tab-audit" class="tab" hidden>
-        <div class="toolbar"><h2>Audit log</h2><span class="muted">Latest 200 changes</span></div>
-        <div class="table-wrap">
-          <table>
-            <thead><tr><th>When</th><th>Who</th><th>Action</th><th>Target</th><th>Details</th></tr></thead>
-            <tbody id="audit"></tbody>
-          </table>
-        </div>
-        <p id="audit-empty" class="empty" hidden>Nothing recorded yet.</p>
-      </section>
-    </main>
+    </section>
+    <section class="auth-panel">
+      <form id="login-form" class="auth-card">
+        <div class="brand brand-sm"><img src="logo.svg" alt="" width="32" height="32"><span>Watchtower</span></div>
+        <h2>Sign in</h2>
+        <p class="muted">Use your organisation's single sign-on, or an access token from your token server.</p>
+        <button type="button" id="sso" class="btn btn-primary btn-block" hidden>Sign in with SSO</button>
+        <div id="sso-or" class="divider" hidden><span>or use a token</span></div>
+        <label class="field">
+          <span>Access token</span>
+          <input id="login-token" type="password" autocomplete="off" spellcheck="false" placeholder="Paste your token">
+        </label>
+        <label class="check"><input id="login-remember" type="checkbox"> Remember on this device</label>
+        <p id="login-error" class="form-error" role="alert"></p>
+        <button type="submit" class="btn btn-dark btn-block">Continue</button>
+      </form>
+    </section>
   </div>
 
-  <dialog id="stream-dialog">
+  <!-- ============================================================ app shell -->
+  <div id="app" class="shell" hidden>
+    <aside class="sidebar" id="sidebar">
+      <a class="brand" href="#/overview"><img src="logo.svg" alt="" width="34" height="34"><span>Watchtower</span><em>v2</em></a>
+      <nav class="nav" id="nav" aria-label="Main"></nav>
+      <div class="sidebar-foot">
+        <div class="conn" id="conn"><span class="pulse"></span><span id="conn-text">Connecting…</span></div>
+        <div class="user">
+          <div class="avatar" id="avatar"></div>
+          <div class="user-meta"><strong id="user-name"></strong><span id="user-role"></span></div>
+          <button class="icon-btn" id="logout" title="Sign out" aria-label="Sign out"></button>
+        </div>
+      </div>
+    </aside>
+    <div class="scrim" id="scrim" hidden></div>
+    <div class="main">
+      <header class="topbar">
+        <button class="icon-btn menu-btn" id="menu-btn" aria-label="Open menu"></button>
+        <div class="titles">
+          <h1 id="page-title">Overview</h1>
+          <p id="page-subtitle" class="muted"></p>
+        </div>
+        <div class="top-actions" id="top-actions"></div>
+      </header>
+      <main class="view" id="view" tabindex="-1"></main>
+    </div>
+  </div>
+
+  <!-- ============================================================ dialogs -->
+  <dialog id="stream-dialog" class="modal modal-wide">
     <form id="stream-form" method="dialog">
-      <h2 id="stream-dialog-title">Add camera</h2>
-      <div class="grid">
-        <label>Name <input name="name" required maxlength="200"></label>
-        <label>Location <input name="location" maxlength="200"></label>
-        <label class="wide">Source URL
-          <input name="source_url" placeholder="rtsp://user:password@camera.local:554/stream" maxlength="2048">
-          <small id="source-hint" class="muted"></small>
-        </label>
-        <label>Frames per second <input name="fps" type="number" min="1" max="60"></label>
-        <label>Detector size
-          <select name="detector_resolution"><option>320</option><option>416</option><option>512</option><option>640</option></select>
-        </label>
-        <label>Min. confidence <input name="detection_confidence" type="number" step="0.01" min="0" max="1"></label>
-        <label>Result every (ms) <input name="results_interval_ms" type="number" min="100" max="120000" step="100"></label>
-        <label>Snapshot
-          <select name="snapshot"><option value="best">best</option><option value="first">first</option><option value="last">last</option></select>
-        </label>
-        <label>Delivery
-          <select name="delivery_mode">
-            <option value="">worker default</option>
-            <option value="realtime">realtime (never late)</option>
-            <option value="reliable">reliable (never lost)</option>
-          </select>
-        </label>
-        <label class="wide">Results URL <input name="results_url" placeholder="default from the controller" maxlength="2048"></label>
-        <label class="check wide"><input name="include_frame" type="checkbox"> Send the full frame with each result</label>
-        <label class="wide">Metadata (JSON) <textarea name="metadata" rows="3" spellcheck="false">{}</textarea></label>
+      <header class="modal-head">
+        <div><h2 id="stream-dialog-title">Add camera</h2><p class="muted">Changes to the source or settings restart the camera's analysis.</p></div>
+        <button type="button" class="icon-btn" data-close aria-label="Close"></button>
+      </header>
+      <div class="modal-body">
+        <fieldset>
+          <legend>Camera</legend>
+          <div class="grid2">
+            <label class="field"><span>Name</span><input name="name" required maxlength="200" placeholder="Lobby entrance" autofocus></label>
+            <label class="field"><span>Location</span><input name="location" maxlength="200" placeholder="Building A, ground floor"></label>
+            <label class="field wide"><span>Source URL</span>
+              <input name="source_url" maxlength="2048" placeholder="rtsp://user:password@10.0.0.12:554/stream" spellcheck="false">
+              <small id="source-hint" class="hint">RTSP, RTMP, SRT or HTTP. The password is stored but never shown again.</small>
+            </label>
+          </div>
+        </fieldset>
+        <fieldset>
+          <legend>Detection</legend>
+          <div class="grid3">
+            <label class="field"><span>Frames per second</span><input name="fps" type="number" min="1" max="60"></label>
+            <label class="field"><span>Detector size</span>
+              <select name="detector_resolution"><option>320</option><option>416</option><option>512</option><option>640</option></select>
+            </label>
+            <label class="field"><span>Min. confidence</span><input name="detection_confidence" type="number" step="0.01" min="0" max="1"></label>
+          </div>
+        </fieldset>
+        <fieldset>
+          <legend>Results</legend>
+          <div class="grid3">
+            <label class="field"><span>Result every (ms)</span><input name="results_interval_ms" type="number" min="100" max="120000" step="100"></label>
+            <label class="field"><span>Snapshot</span>
+              <select name="snapshot"><option value="best">Best moment</option><option value="first">First seen</option><option value="last">Last seen</option></select>
+            </label>
+            <label class="field"><span>Delivery</span>
+              <select name="delivery_mode">
+                <option value="">Worker default</option>
+                <option value="realtime">Real time (never late)</option>
+                <option value="reliable">Reliable (never lost)</option>
+              </select>
+            </label>
+            <label class="field wide"><span>Results URL</span><input name="results_url" maxlength="2048" placeholder="Default from the controller" spellcheck="false"></label>
+            <label class="check wide"><input name="include_frame" type="checkbox"> Send the full frame with each result, not just the face</label>
+          </div>
+        </fieldset>
+        <fieldset>
+          <legend>Metadata <span class="muted">(JSON, optional)</span></legend>
+          <textarea name="metadata" rows="3" spellcheck="false">{}</textarea>
+        </fieldset>
+        <p id="stream-error" class="form-error" role="alert"></p>
       </div>
-      <p id="stream-error" class="error" role="alert"></p>
-      <div class="dialog-actions">
-        <button type="button" class="ghost" data-close>Cancel</button>
-        <button type="submit" class="primary" id="stream-submit">Save</button>
-      </div>
+      <footer class="modal-foot">
+        <button type="button" class="btn btn-ghost" data-close>Cancel</button>
+        <button type="submit" class="btn btn-primary" id="stream-submit">Save camera</button>
+      </footer>
     </form>
   </dialog>
 
-  <dialog id="view-dialog" class="view-dialog">
-    <div class="view-head">
-      <h2 id="view-title">Live</h2>
-      <button type="button" class="ghost" data-close>Close</button>
-    </div>
-    <video id="view-video" autoplay muted playsinline controls></video>
-    <p id="view-status" class="muted"></p>
+  <dialog id="view-dialog" class="modal modal-video">
+    <header class="modal-head">
+      <div><h2 id="view-title">Live</h2><p id="view-sub" class="muted"></p></div>
+      <button type="button" class="icon-btn" data-close aria-label="Close"></button>
+    </header>
+    <div class="video-frame"><video id="view-video" autoplay muted playsinline controls></video><div class="video-overlay" id="view-status">Connecting…</div></div>
+  </dialog>
+
+  <dialog id="confirm-dialog" class="modal modal-small">
+    <form method="dialog">
+      <div class="modal-body">
+        <h2 id="confirm-title">Are you sure?</h2>
+        <p id="confirm-text" class="muted"></p>
+      </div>
+      <footer class="modal-foot">
+        <button value="cancel" class="btn btn-ghost">Cancel</button>
+        <button value="ok" class="btn btn-danger" id="confirm-ok">Confirm</button>
+      </footer>
+    </form>
   </dialog>
 
   <div id="toasts" class="toasts" aria-live="polite"></div>

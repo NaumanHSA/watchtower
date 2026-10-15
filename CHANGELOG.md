@@ -19,7 +19,10 @@ A redesign of how the controller and workers cooperate. Not compatible with 1.x;
   results keys with optional encryption at rest, admin API, CLI, optional decrypting
   results receiver with forwarding.
 - Result delivery modes `realtime` and `reliable` (on-disk spool), per camera.
-- Web dashboard with live updates and in-browser WebRTC live view (TURN relays supported).
+- Web dashboard (light theme, no build step, strict CSP): an overview with fleet health and what needs
+  attention, camera management with search and filters, a live video wall, worker cards with load and
+  delivery counters, live activity and an audit log. Live updates over WebSocket and in-browser WebRTC live
+  view (TURN relays supported).
 - Per-camera processing settings through the API.
 - Health, readiness and Prometheus metrics for the controller and workers.
 - Audit log of every change (`GET /api/v1/audit`, dashboard Audit tab) and a per-address

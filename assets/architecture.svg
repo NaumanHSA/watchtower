@@ -1,0 +1,130 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 560" width="1000" height="560" role="img" aria-labelledby="t d">
+  <title id="t">How Watchtower fits together</title>
+  <desc id="d">Your team uses the controller's dashboard and API. Workers connect out to the controller, register once and then sync every few seconds to learn which cameras to run. Workers read the cameras, send detections to your application, and stream live video to viewers over WebRTC.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#64748b"/>
+    </marker>
+    <marker id="arrow-teal" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#0d9488"/>
+    </marker>
+    <marker id="arrow-orange" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#f97316"/>
+    </marker>
+    <linearGradient id="ctl" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0b1b34"/><stop offset="1" stop-color="#173a6b"/>
+    </linearGradient>
+  </defs>
+  <style>
+    text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, "Helvetica Neue", Arial, sans-serif; fill: #0f172a; }
+    .h { font-size: 15px; font-weight: 700; }
+    .s { font-size: 12px; fill: #475569; }
+    .l { font-size: 12px; font-weight: 600; fill: #334155; }
+    .m { font-size: 11.5px; fill: #64748b; }
+    .w { fill: #ffffff; }
+    .chip { font-size: 12px; font-weight: 600; fill: #e2e8f0; }
+    .box { fill: #ffffff; stroke: #dbe3ee; stroke-width: 1.5; }
+    .inner { fill: #f8fafc; stroke: #e2e8f0; stroke-width: 1.2; }
+    .line { stroke: #64748b; stroke-width: 1.8; fill: none; }
+  </style>
+
+  <rect width="1000" height="560" rx="20" fill="#f4f7fb"/>
+
+  <!-- your team -->
+  <rect class="box" x="30" y="40" width="200" height="112" rx="14"/>
+  <text class="h" x="50" y="70">Your team</text>
+  <text class="s" x="50" y="94">Dashboard in the browser</text>
+  <text class="s" x="50" y="113">REST API · scripts</text>
+  <text class="s" x="50" y="132">Sign-in: SSO or tokens</text>
+
+  <!-- controller -->
+  <rect x="330" y="30" width="340" height="152" rx="16" fill="url(#ctl)"/>
+  <text class="h w" x="350" y="60" style="fill:#fff">Controller</text>
+  <text class="m" x="438" y="60" style="fill:#94a3b8">one or more replicas</text>
+  <g>
+    <rect x="345" y="76" width="150" height="40" rx="9" fill="#ffffff" fill-opacity=".08" stroke="#ffffff" stroke-opacity=".18"/>
+    <text class="chip" x="420" y="101" text-anchor="middle">REST API · dashboard</text>
+    <rect x="505" y="76" width="150" height="40" rx="9" fill="#2dd4bf" fill-opacity=".16" stroke="#2dd4bf" stroke-opacity=".5"/>
+    <text class="chip" x="580" y="101" text-anchor="middle" style="fill:#99f6e4">Scheduler (leader)</text>
+    <rect x="345" y="126" width="150" height="40" rx="9" fill="#ffffff" fill-opacity=".08" stroke="#ffffff" stroke-opacity=".18"/>
+    <text class="chip" x="420" y="151" text-anchor="middle">Live events</text>
+    <rect x="505" y="126" width="150" height="40" rx="9" fill="#ffffff" fill-opacity=".08" stroke="#ffffff" stroke-opacity=".18"/>
+    <text class="chip" x="580" y="151" text-anchor="middle">Audit · metrics</text>
+  </g>
+
+  <!-- identity + database -->
+  <rect class="box" x="780" y="30" width="190" height="70" rx="14"/>
+  <text class="h" x="798" y="58">Identity</text>
+  <text class="s" x="798" y="80">OIDC provider or token server</text>
+  <rect class="box" x="780" y="114" width="190" height="68" rx="14"/>
+  <text class="h" x="798" y="142">MongoDB</text>
+  <text class="s" x="798" y="163">cameras · workers · audit</text>
+
+  <!-- arrows: team, identity, db -->
+  <path class="line" d="M232 96 H326" marker-end="url(#arrow)"/>
+  <text class="l" x="279" y="86" text-anchor="middle">HTTPS</text>
+  <path class="line" d="M672 65 H776" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
+  <text class="l" x="724" y="56" text-anchor="middle">check tokens</text>
+  <path class="line" d="M672 148 H776" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
+  <text class="l" x="724" y="139" text-anchor="middle">state</text>
+
+  <!-- worker sync -->
+  <path d="M500 296 V186" stroke="#2563eb" stroke-width="2.4" fill="none" marker-end="url(#arrow)"/>
+  <rect x="510" y="214" width="372" height="50" rx="10" fill="#eff6ff" stroke="#bfdbfe"/>
+  <text class="l" x="524" y="235" style="fill:#1d4ed8">register once, then sync every 5 s</text>
+  <text class="m" x="524" y="253">the worker always dials out (HTTPS), so NAT and firewalls are fine</text>
+  <text class="m" x="490" y="235" text-anchor="end">“here is what I run”</text>
+  <text class="m" x="490" y="253" text-anchor="end">“here is what you should run”</text>
+
+  <!-- workers (stacked) -->
+  <rect x="318" y="318" width="400" height="206" rx="16" fill="#e2e8f0" stroke="#cbd5e1"/>
+  <rect class="box" x="300" y="300" width="400" height="206" rx="16"/>
+  <text class="h" x="320" y="330">Worker host</text>
+  <rect x="600" y="314" width="84" height="24" rx="12" fill="#ecfdf5" stroke="#a7f3d0"/>
+  <text class="m" x="642" y="330" text-anchor="middle" style="fill:#047857;font-weight:700">one or many</text>
+
+  <rect class="inner" x="318" y="348" width="114" height="62" rx="10"/>
+  <text class="l" x="330" y="372">Agent</text>
+  <text class="m" x="330" y="392">sync loop</text>
+  <rect class="inner" x="442" y="348" width="128" height="62" rx="10"/>
+  <text class="l" x="454" y="372">Engines</text>
+  <text class="m" x="454" y="392">one per camera</text>
+  <rect class="inner" x="580" y="348" width="104" height="62" rx="10"/>
+  <text class="l" x="592" y="372">MediaMTX</text>
+  <text class="m" x="592" y="392">live re-stream</text>
+
+  <rect x="318" y="420" width="252" height="70" rx="10" fill="#f0fdfa" stroke="#99f6e4"/>
+  <text class="l" x="330" y="444" style="fill:#0f766e">detect → track → best face</text>
+  <text class="m" x="330" y="464">YuNet on ONNX Runtime, CPU</text>
+  <text class="m" x="330" y="481">one result per face, not per frame</text>
+  <rect x="580" y="420" width="104" height="70" rx="10" fill="#fff7ed" stroke="#fed7aa"/>
+  <text class="l" x="592" y="444" style="fill:#c2410c">Delivery</text>
+  <text class="m" x="592" y="464">encrypt,</text>
+  <text class="m" x="592" y="481">queue or spool</text>
+
+  <!-- cameras -->
+  <rect class="box" x="30" y="390" width="180" height="100" rx="14"/>
+  <text class="h" x="50" y="420">Cameras</text>
+  <text class="s" x="50" y="443">IP cameras, NVRs,</text>
+  <text class="s" x="50" y="461">any RTSP/RTMP/SRT</text>
+  <g fill="none" stroke="#2563eb" stroke-width="1.8"><rect x="160" y="404" width="22" height="15" rx="3"/><path d="M182 409 L192 404 V419 L182 414"/></g>
+  <path class="line" d="M212 440 H296" marker-end="url(#arrow)"/>
+  <text class="l" x="254" y="430" text-anchor="middle">video</text>
+
+  <!-- your application -->
+  <rect class="box" x="780" y="390" width="190" height="100" rx="14"/>
+  <text class="h" x="798" y="420">Your application</text>
+  <text class="s" x="798" y="443">gets detections at its URL</text>
+  <text class="s" x="798" y="461">realtime or reliable</text>
+  <text class="s" x="798" y="479">encrypted to your key</text>
+  <path d="M722 440 H776" stroke="#f97316" stroke-width="2.2" fill="none" marker-end="url(#arrow-orange)"/>
+  <text class="l" x="749" y="430" text-anchor="middle" style="fill:#c2410c">results</text>
+
+  <!-- live view back to the team -->
+  <path d="M300 326 C 190 326, 130 262, 130 156" stroke="#0d9488" stroke-width="2.2" stroke-dasharray="6 5" fill="none" marker-end="url(#arrow-teal)"/>
+  <text class="l" x="44" y="236" style="fill:#0f766e">live video</text>
+  <text class="m" x="44" y="253">WebRTC, straight</text>
+  <text class="m" x="44" y="269">from the worker</text>
+
+  <text class="m" x="30" y="540">The controller never connects to workers. A worker that goes silent loses its cameras to healthy workers within about 75 seconds.</text>
+</svg>

@@ -91,6 +91,15 @@ async def test_garbage_and_unsigned_tokens_are_rejected(idp):
         await provider.verify(unsigned)
 
 
+async def test_first_token_after_boot_loads_the_keys(idp, monkeypatch):
+    # The monotonic clock is close to zero right after a machine boots (fresh CI runners,
+    # new nodes); the empty key cache must not look "recently fetched" then.
+    monkeypatch.setattr("watchtower_controller.oidc.time.monotonic", lambda: 5.0)
+    provider = provider_for(idp)
+    assert (await provider.verify(idp.token())).role == Role.OPERATOR
+    assert idp.jwks_calls == 1
+
+
 async def test_key_rotation_refetches_at_most_once_a_minute(idp):
     provider = provider_for(idp)
     await provider.verify(idp.token())

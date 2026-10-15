@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import math
 import time
 from typing import Any
 
@@ -65,7 +66,7 @@ class OidcProvider:
         self.key_pem = key_pem
         self._client = httpx.AsyncClient(timeout=timeout, transport=transport)
         self._keys: dict[str, Any] = {}
-        self._fetched_at = 0.0
+        self._fetched_at: float | None = None  # monotonic time of the last fetch; None = never
         self._lock = asyncio.Lock()
         if not audience:
             log.warning("OIDC_AUDIENCE is not set: any token from %s with a Watchtower role is accepted, "
@@ -106,13 +107,18 @@ class OidcProvider:
         human = [r for r in roles if r != Role.WORKER]
         return max(human, key=ROLE_RANK.__getitem__) if human else Role.WORKER
 
+    def _keys_age(self) -> float:
+        # Not "now - 0": the monotonic clock starts near zero at boot, so on a freshly started
+        # machine that would look like a recent fetch and block loading the keys for a minute.
+        return math.inf if self._fetched_at is None else time.monotonic() - self._fetched_at
+
     async def _key(self, kid: str | None) -> Any:
-        fresh = time.monotonic() - self._fetched_at < JWKS_TTL_SECONDS
+        fresh = self._keys_age() < JWKS_TTL_SECONDS
         if fresh and (kid in self._keys or (kid is None and len(self._keys) == 1)):
             return self._keys[kid] if kid else next(iter(self._keys.values()))
         async with self._lock:
             # Unknown kid: refetch (key rotation), but never more than once a minute.
-            if not fresh or time.monotonic() - self._fetched_at >= REFETCH_MIN_SECONDS:
+            if not fresh or self._keys_age() >= REFETCH_MIN_SECONDS:
                 await self._fetch()
         if kid in self._keys:
             return self._keys[kid]

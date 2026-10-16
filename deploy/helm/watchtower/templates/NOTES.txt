@@ -22,6 +22,6 @@ each worker's WebRTC ports. Set worker.hostNetwork=true, or expose 8889/tcp and
 {{- end }}
 {{- if and .Values.controller.enabled (gt (int .Values.controller.replicas) 1) (not .Values.controller.redisUrl) }}
 
-Note: controller.replicas > 1 without controller.redisUrl — dashboards only see live
+Note: controller.replicas > 1 without controller.redisUrl: dashboards only see live
 events from the replica they are connected to.
 {{- end }}

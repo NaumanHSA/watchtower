@@ -5,6 +5,8 @@
 #
 # The worker only makes outbound calls (to the controller and the results URL). Inbound,
 # it needs WebRTC ports for live viewers: 8889/tcp for signalling and 8189 udp+tcp for media.
+# When the dashboard is on HTTPS, add `--profile tls` so viewers reach this host over HTTPS
+# too (443/tcp, plus 80/tcp for the certificate); see .env.example.
 name: watchtower-worker
 
 services:
@@ -40,5 +42,18 @@ services:
       # The address viewers reach this host at; MediaMTX advertises it for WebRTC media.
       MTX_WEBRTCADDITIONALHOSTS: ${PUBLIC_HOST:-127.0.0.1}
 
+  # HTTPS for live view. Browsers refuse plain-HTTP live video on an HTTPS dashboard, so
+  # Caddy gets a certificate for WEBRTC_DOMAIN and forwards to MediaMTX. Keep it outside
+  # worker-net: MediaMTX lets loopback clients (this worker's own engines) in without a
+  # token, so a proxy inside that namespace would let every viewer in.
+  caddy:
+    profiles: [tls]
+    image: caddy:2
+    restart: unless-stopped
+    command: caddy reverse-proxy --from ${WEBRTC_DOMAIN:-localhost} --to worker-net:8889
+    ports: ["80:80", "443:443"]
+    volumes: [caddy-data:/data]
+
 volumes:
   worker-state:
+  caddy-data:

@@ -1,5 +1,7 @@
 # A stand-in IP camera for local development: an RTSP server that anyone on the compose
-# network may publish to and read from. `camera-feed` publishes rtsp://camera:8554/cam1.
+# network may publish to and read from. `camera-feed` publishes rtsp://camera:8554/cam1;
+# cam2 and cam3 show the same picture under other addresses, so you can add several
+# cameras (Watchtower refuses two cameras with the same source URL).
 logLevel: warn
 authMethod: internal
 authInternalUsers:
@@ -17,4 +19,10 @@ hls: false
 webrtc: false
 srt: false
 paths:
+  cam2:
+    source: rtsp://localhost:8554/cam1
+    sourceOnDemand: yes
+  cam3:
+    source: rtsp://localhost:8554/cam1
+    sourceOnDemand: yes
   all_others:

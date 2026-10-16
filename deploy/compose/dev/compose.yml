@@ -4,8 +4,10 @@
 #
 # Then open http://localhost:7000 and log in with the admin token below
 # (dev-admin-token unless you set ADMIN_TOKEN). A fake camera is already running at
-# rtsp://camera:8554/cam1; drop an .mp4 with faces at deploy/compose/dev/media/sample.mp4
-# to see detections. Results are decrypted by the token server and saved under its volume.
+# rtsp://camera:8554/cam1 (also cam2 and cam3); drop an .mp4 with faces at
+# deploy/compose/dev/media/sample.mp4 to see detections. Results are decrypted by the
+# token server and saved under its volume. Add `--profile second-worker` to run a
+# second worker.
 #
 # The tokens here are for local use only. Never reuse them on a reachable host.
 name: watchtower-dev
@@ -83,6 +85,47 @@ services:
     environment:
       MTX_WEBRTCADDITIONALHOSTS: 127.0.0.1  # so a browser on this machine can reach the media port
 
+  # A second worker, to try adding workers and failover:
+  #   docker compose -f deploy/compose/dev/compose.yml --profile second-worker up -d
+  # Its MediaMTX listens on different ports (8890, 8190) so both can run on one machine.
+  worker-2-net:
+    image: registry.k8s.io/pause:3.10
+    profiles: [second-worker]
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8082:8081"    # worker health/metrics
+      - "127.0.0.1:8890:8890"    # WebRTC (viewers)
+      - "127.0.0.1:8190:8190/udp"
+      - "127.0.0.1:8190:8190/tcp"
+
+  worker-2:
+    image: watchtower-worker:dev
+    profiles: [second-worker]
+    restart: unless-stopped
+    network_mode: service:worker-2-net
+    depends_on: [worker-2-net, controller, worker]
+    environment:
+      CONTROLLER_URL: http://controller:7000
+      WATCHTOWER_TOKEN: ${WORKER_TOKEN:-dev-worker-token}
+      WORKER_NAME: dev-worker-2
+      MAX_STREAMS: "2"
+      PUBLIC_WEBRTC_URL: http://localhost:8890
+      DELIVERY_MODE: reliable
+    volumes: [worker-2-state:/var/lib/watchtower]
+
+  mediamtx-2:
+    image: bluenviron/mediamtx:1.21.2
+    profiles: [second-worker]
+    restart: unless-stopped
+    network_mode: service:worker-2-net
+    depends_on: [worker-2-net]
+    volumes: ["../../mediamtx/mediamtx.yml:/mediamtx.yml:ro"]
+    environment:
+      MTX_WEBRTCADDRESS: ":8890"
+      MTX_WEBRTCLOCALUDPADDRESS: ":8190"
+      MTX_WEBRTCLOCALTCPADDRESS: ":8190"
+      MTX_WEBRTCADDITIONALHOSTS: 127.0.0.1
+
   camera:
     image: bluenviron/mediamtx:1.21.2
     restart: unless-stopped
@@ -101,3 +144,4 @@ volumes:
   mongo-data:
   tokens:
   worker-state:
+  worker-2-state:

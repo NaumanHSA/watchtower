@@ -26,8 +26,8 @@ jobs:
           --health-cmd "mongosh --quiet --eval 'db.adminCommand({ping:1})'"
           --health-interval 5s --health-timeout 5s --health-retries 20
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v6
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.3.0
         with:
           enable-cache: true
       - run: uv sync --all-packages --frozen
@@ -44,9 +44,9 @@ jobs:
       matrix:
         service: [controller, worker, token-server]
     steps:
-      - uses: actions/checkout@v4
-      - uses: docker/setup-buildx-action@v3
-      - uses: docker/build-push-action@v6
+      - uses: actions/checkout@v7
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/build-push-action@v7
         with:
           context: .
           file: ${{ matrix.service }}/Dockerfile
@@ -69,8 +69,8 @@ jobs:
     name: Helm chart
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: azure/setup-helm@v4
+      - uses: actions/checkout@v7
+      - uses: azure/setup-helm@v5
       - name: Lint and render
         run: |
           set -- --set controller.mongoUri=mongodb://mongo:27017 --set worker.tokenSecret.name=wt-worker                  --set tokenServer.enabled=true --set controller.ingress.enabled=true --set worker.hostNetwork=true
@@ -83,7 +83,7 @@ jobs:
     name: Secret scan
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0  # scan the whole history, not just the last commit
       - name: gitleaks
@@ -93,7 +93,7 @@ jobs:
     name: Dependency audit
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v6
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.3.0
       - run: uv export --all-packages --frozen --no-emit-workspace --format requirements-txt > requirements.lock.txt
       - run: uvx pip-audit --requirement requirements.lock.txt --disable-pip --progress-spinner off

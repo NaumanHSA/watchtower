@@ -1,14 +1,31 @@
+# Dependabot keeps dependencies current by opening pull requests. Each kind of dependency
+# is grouped, so a week's updates arrive as at most one pull request per kind. CI runs on
+# each one; merge it when it is green. Security fixes are opened as soon as they appear.
 version: 2
 updates:
+  # Python packages (uv.lock and the pyproject.toml files)
   - package-ecosystem: uv
     directory: /
     schedule: {interval: weekly}
+    commit-message: {prefix: "deps(python)"}
     groups:
       python:
         patterns: ["*"]
+
+  # Actions used by the workflows in .github/workflows
   - package-ecosystem: github-actions
     directory: /
     schedule: {interval: weekly}
+    commit-message: {prefix: "deps(actions)"}
+    groups:
+      github-actions:
+        patterns: ["*"]
+
+  # Base images of the three Dockerfiles
   - package-ecosystem: docker
     directories: [/controller, /worker, /token-server]
     schedule: {interval: weekly}
+    commit-message: {prefix: "deps(docker)"}
+    groups:
+      docker-images:
+        patterns: ["*"]

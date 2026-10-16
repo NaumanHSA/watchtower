@@ -24,7 +24,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends libgomp1 && rm 
  && useradd --system --uid 10001 --no-create-home watchtower \
  && install -d -o watchtower -g watchtower /var/lib/watchtower
 COPY --from=build /opt/venv /opt/venv
-ENV PATH=/opt/venv/bin:$PATH PYTHONUNBUFFERED=1 STATE_DIR=/var/lib/watchtower
+# ORT_DISABLE_TELEMETRY: onnxruntime otherwise sends usage telemetry to Microsoft (see engine/detector.py).
+ENV PATH=/opt/venv/bin:$PATH PYTHONUNBUFFERED=1 STATE_DIR=/var/lib/watchtower ORT_DISABLE_TELEMETRY=1
 USER watchtower
 VOLUME /var/lib/watchtower
 EXPOSE 8081

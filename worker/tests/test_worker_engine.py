@@ -181,3 +181,12 @@ def test_frame_source_gives_up_on_missing_source(tmp_path):
         time.sleep(0.05)
     source.stop()
     assert source.state == SourceState.FAILED and source.error == "cannot open source"
+
+
+def test_onnxruntime_telemetry_is_off_before_it_loads():
+    # onnxruntime phones home on load unless this is set first (seen with a packet capture).
+    import os
+
+    import watchtower_worker.engine.detector  # noqa: F401
+
+    assert os.environ.get("ORT_DISABLE_TELEMETRY") == "1"

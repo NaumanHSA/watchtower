@@ -5,11 +5,17 @@
 """YuNet face detectors. Both return [[x1, y1, x2, y2, confidence], ...] in frame pixels."""
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from typing import Protocol
 
 import cv2
 import numpy as np
+
+# onnxruntime (1.31 on Linux) starts Microsoft's 1DS telemetry when it loads and posts to
+# mobile.events.data.microsoft.com; disable_telemetry_events() alone doesn't stop that, the
+# variable does. It must be set before onnxruntime is imported. No usage data leaves a camera host.
+os.environ.setdefault("ORT_DISABLE_TELEMETRY", "1")
 
 WEIGHTS_DIR = Path(__file__).resolve().parent.parent / "weights"
 ASPECT = 4 / 3  # input height = width / ASPECT; matches the bundled post-processing models
@@ -27,7 +33,7 @@ class OnnxYuNet:
     def __init__(self, resolution: int, confidence: float, max_faces: int, weights_dir: Path = WEIGHTS_DIR):
         import onnxruntime as ort
 
-        ort.disable_telemetry_events()  # no usage data leaves a camera host
+        ort.disable_telemetry_events()  # belt and braces; ORT_DISABLE_TELEMETRY (above) is what stops it
         self.width = resolution
         self.height = int(resolution / ASPECT)
         self.confidence = confidence

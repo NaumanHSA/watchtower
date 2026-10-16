@@ -1,6 +1,6 @@
 # Changelog
 
-## 2.0.0 (unreleased)
+## 2.0.0 (2026-10-16)
 
 A redesign of how the controller and workers cooperate. Not compatible with 1.x; see
 [docs/upgrading-from-v1.md](docs/upgrading-from-v1.md).

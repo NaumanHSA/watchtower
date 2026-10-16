@@ -1,9 +1,11 @@
-# API
+# REST API
 
-The controller serves an OpenAPI description at `/docs` (interactive) and
-`/openapi.json`. Everything under `/api/v1` needs `Authorization: Bearer <token>`;
-the role required is noted per endpoint. The older `watchtower-token` header is also
-accepted.
+Everything the dashboard does, you can do from a script through the REST API. This page lists every endpoint
+with the role it needs, and the formats of live events and errors.
+
+The controller also serves interactive documentation at `/docs`, where you can try each call from the browser,
+and a machine-readable description at `/openapi.json`. Every call under `/api/v1` needs a token in the
+`Authorization: Bearer <token>` header (the older `watchtower-token` header also works).
 
 ## Cameras (streams)
 
@@ -12,7 +14,7 @@ accepted.
 | `GET` | `/api/v1/streams` | viewer | List. Filters: `?status=running`, `?worker_id=…` |
 | `GET` | `/api/v1/streams/{id}` | viewer | One stream |
 | `POST` | `/api/v1/streams` | operator | Add. Send `Idempotency-Key` to make retries safe. |
-| `PATCH` | `/api/v1/streams/{id}` | operator | Change `name`, `location`, `metadata`, `source_url`, or some `config` keys |
+| `PATCH` | `/api/v1/streams/{id}` | operator | Change `name`, `location`, `metadata`, `source_url` or any `config` key; only the keys you send change |
 | `POST` | `/api/v1/streams/{id}/start` | operator | Start, or retry a `failed` stream |
 | `POST` | `/api/v1/streams/{id}/stop` | operator | Stop |
 | `DELETE` | `/api/v1/streams/{id}` | operator | Remove |
@@ -30,6 +32,28 @@ curl -X POST http://localhost:7000/api/v1/streams \
 unique. The password in it is masked in every response. A new stream starts
 `pending` and is usually `running` within a few seconds; follow it on the event
 stream or by polling.
+
+In the API, cameras are called *streams*. Every camera setting is described in
+[Cameras](cameras.md#camera-settings).
+
+A few everyday calls:
+
+```bash
+# Cameras that need attention
+curl -s -H "Authorization: Bearer $TOKEN" "$WT/api/v1/streams?status=failed"
+
+# Change two settings of one camera (restarts its analysis)
+curl -s -X PATCH -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \n  "$WT/api/v1/streams/$ID" -d '{"config": {"fps": 5, "results_interval_ms": 3000}}'
+
+# Retry a failed camera
+curl -s -X POST -H "Authorization: Bearer $TOKEN" "$WT/api/v1/streams/$ID/start"
+
+# Drain a worker before maintenance, then undo it
+curl -s -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \n  "$WT/api/v1/workers/$WORKER/drain" -d '{"draining": true}'
+curl -s -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \n  "$WT/api/v1/workers/$WORKER/drain" -d '{"draining": false}'
+```
+
+(`$WT` is your controller's address, for example `https://watchtower.example.com`.)
 
 ## Workers
 
@@ -95,4 +119,4 @@ Every change made through the API is recorded with the token's subject and role:
 `stream.create`, `stream.update`, `stream.start`, `stream.stop`, `stream.delete`,
 `worker.register`, `worker.drain`, `worker.undrain`, `worker.delete`. Camera passwords
 are masked. Entries expire after `AUDIT_RETENTION_DAYS`. Admins see them in the
-dashboard's Audit tab.
+dashboard's **Audit log** page.

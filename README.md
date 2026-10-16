@@ -158,6 +158,13 @@ docker compose -f deploy/compose/dev/compose.yml up --build -d
    `docker compose -f deploy/compose/dev/compose.yml restart camera-feed`.
 5. Results go to the bundled token server, which decrypts and saves them. Watch them arrive with
    `docker compose -f deploy/compose/dev/compose.yml logs -f token-server`.
+6. Add a second worker with
+   `docker compose -f deploy/compose/dev/compose.yml --profile second-worker up -d`, add cameras on
+   `rtsp://camera:8554/cam2` and `cam3`, then kill a worker (`docker compose ... kill worker`) and watch its cameras
+   move.
+
+The full walkthrough, with what to expect at every step, is
+[Try it on your computer](https://naumanhsa.github.io/watchtower/quick-start/) in the manual.
 
 What the dev stack runs:
 
@@ -165,11 +172,12 @@ What the dev stack runs:
 |---|---|---|
 | Dashboard and API | <http://localhost:7000> | Tokens: `dev-admin-token`, `dev-viewer-token` (read-only) |
 | Token server | <http://localhost:9000> | Issues and checks tokens, receives and decrypts results |
-| Worker health and metrics | <http://localhost:8081/readyz> | One worker, `dev-worker-1`, with 4 camera slots |
+| Worker health and metrics | <http://localhost:8081/readyz> | One worker, `dev-worker-1`, with 4 camera slots (`dev-worker-2` on 8082 with the `second-worker` profile) |
 | WebRTC (live view) | `localhost:8889`, `8189/udp` | MediaMTX on the worker |
-| Fake camera | `rtsp://camera:8554/cam1` | Reachable from inside the stack only |
+| Fake camera | `rtsp://camera:8554/cam1`, `cam2`, `cam3` | Reachable from inside the stack only |
 
-Stop everything with `docker compose -f deploy/compose/dev/compose.yml down` (add `-v` to also delete the data).
+Stop everything with `docker compose -f deploy/compose/dev/compose.yml --profile second-worker down` (add `-v` to
+also delete the data).
 
 > [!WARNING]
 > The dev stack uses fixed, public tokens and plain HTTP. It is for trying things out on one machine. To deploy for
@@ -307,7 +315,7 @@ Pick an identity provider with `AUTH_PROVIDER` on the controller:
 | Provider | Use it when | Setup |
 |---|---|---|
 | `oidc` | You have single sign-on (Keycloak, Entra ID, Auth0, Okta, Google…) | Set `OIDC_ISSUER`, `OIDC_AUDIENCE`, the role claim and optional role mapping; `OIDC_CLIENT_ID` enables the **Sign in with SSO** button. |
-| `http` | You use the bundled token server, or your own token service | Set `TOKEN_SERVER_URL`. The [contract](docs/token-server.md) is one POST that returns the token's role. |
+| `http` | You use the bundled token server, or your own token service | Set `TOKEN_SERVER_URL`. The [contract](docs/token-server.md) is one GET request that returns the token's role. |
 | `static` | Small or air-gapped installs | Tokens in `STATIC_TOKENS` or a file, as `role:token`. |
 | `oidc,static` | People use SSO, machines use tokens | Providers are tried in order. |
 | `none` | Local experiments only | Also requires `ALLOW_NO_AUTH=true`. |
@@ -363,7 +371,7 @@ the network or the spool is compromised. Decrypting takes a few lines; see [docs
 |---|---|---|
 | **One machine, to try it** | `deploy/compose/dev` | [Quick start](#-quick-start) |
 | **Production with Docker** | Control plane (controller, MongoDB, token server, Caddy for TLS) on one host with `deploy/compose/controller`; any number of worker hosts with `deploy/compose/worker` | [docs/deployment.md](docs/deployment.md) |
-| **Kubernetes** | Helm chart in `deploy/helm/watchtower` (controller, workers, optional token server, ingress) | [docs/deployment.md](docs/deployment.md#kubernetes) |
+| **Kubernetes** | Helm chart in `deploy/helm/watchtower` (controller, workers, optional token server, ingress) | [docs/kubernetes.md](docs/kubernetes.md) |
 
 A production control plane, in short:
 
@@ -407,14 +415,14 @@ Every service is configured with environment variables. The ones most people tou
 |---|---|---|---|
 | Controller | `MONGO_URI` | `mongodb://localhost:27017` | Where state lives |
 | Controller | `AUTH_PROVIDER` | `http` | `oidc`, `http`, `static`, a chain like `oidc,static`, or `none` |
-| Controller | `RESULTS_URL` | — | Default results URL for cameras that don't set one |
+| Controller | `RESULTS_URL` | not set | Default results URL for cameras that don't set one |
 | Controller | `SYNC_INTERVAL_MS` | `5000` | How often workers sync |
 | Controller | `LEASE_SECONDS` | `60` | How long a silent worker keeps its cameras |
-| Controller | `REDIS_URL` | — | Needed with more than one controller replica, for live events |
+| Controller | `REDIS_URL` | not set | Needed with more than one controller replica, for live events |
 | Worker | `CONTROLLER_URL` | `http://localhost:7000` | Where the controller is |
-| Worker | `WATCHTOWER_TOKEN` | — | A token with the `worker` role |
+| Worker | `WATCHTOWER_TOKEN` | not set | A token with the `worker` role |
 | Worker | `MAX_STREAMS` | `2` | Camera slots on this worker |
-| Worker | `PUBLIC_WEBRTC_URL` | — | Address browsers use for live view from this worker |
+| Worker | `PUBLIC_WEBRTC_URL` | not set | Address browsers use for live view from this worker |
 | Worker | `DELIVERY_MODE` | `realtime` | Default delivery mode |
 | Worker | `REQUIRE_ENCRYPTION` | `false` | Never send results in plaintext |
 
@@ -501,21 +509,29 @@ needs no build: edit and reload. More in [docs/development.md](docs/development.
 
 ## 📚 Documentation
 
-The guides live in [`docs/`](docs/) and are published as a website at
-**<https://naumanhsa.github.io/watchtower/>**, rebuilt from `main` on every change.
+The complete manual lives in [`docs/`](docs/) and is published as a website at
+**<https://naumanhsa.github.io/watchtower/>**, rebuilt from `main` on every change. New to Watchtower? Read the
+*Get started* pages in order.
 
-| Guide | What's in it |
-|---|---|
-| [Architecture](docs/architecture.md) | The pull protocol, scheduling, leases, generations, failure handling |
-| [Deployment](docs/deployment.md) | Production Compose stacks, TLS, networking and TURN, Kubernetes, scaling |
-| [Configuration](docs/configuration.md) | Every setting of every service, and per-camera options |
-| [API](docs/api.md) | REST endpoints, roles, idempotency, live events |
-| [Token servers](docs/token-server.md) | The token contract, the bundled server, using your own |
-| [Results](docs/results.md) | Payload format, delivery modes, encryption and decrypting |
-| [Privacy](docs/privacy.md) | What is stored and sent, and how to minimise it |
-| [Development](docs/development.md) | Working on the code, tests, the dashboard |
-| [Upgrading from 1.x](docs/upgrading-from-v1.md) | What changed and how to move over |
-| [Token server README](token-server/README.md) | Issuing and revoking tokens, rotating keys, the results receiver |
+| Section | Guide | What's in it |
+|---|---|---|
+| Get started | [How Watchtower works](docs/how-it-works.md) | The pieces, the life of a camera, what happens when things fail |
+| | [Try it on your computer](docs/quick-start.md) | A guided tour of the local setup: cameras, live view, results, a second worker, a crash |
+| | [A tour of the dashboard](docs/dashboard.md) | Every page and button, and what each role sees |
+| User guide | [Cameras](docs/cameras.md) | Connecting real cameras, every camera setting, recipes, statuses |
+| | [Workers](docs/workers.md) | Adding a worker step by step, sizing, live view and HTTPS, maintenance |
+| | [Receiving results](docs/results.md) | Writing a receiver, the result format, delivery modes, encryption |
+| | [Users and sign-in](docs/access.md) | Roles, issuing and revoking tokens, single sign-on |
+| Deploy | [Deploying to production](docs/deployment.md) | A step-by-step installation with HTTPS, and a checklist |
+| | [Running on Kubernetes](docs/kubernetes.md) | The Helm chart, step by step |
+| | [Monitoring and maintenance](docs/operations.md) | Health checks, metrics and alert rules, backups, upgrades |
+| Reference | [Configuration](docs/configuration.md) | Every setting of every service, grouped by purpose |
+| | [REST API](docs/api.md) | Endpoints, roles, live events, errors |
+| | [Token servers](docs/token-server.md) | The sign-in contract, writing your own, the bundled server |
+| | [Architecture](docs/architecture.md) | The pull protocol, scheduling, leases and generations in depth |
+| Help | [Troubleshooting](docs/troubleshooting.md) | Problems by symptom, and how to fix them |
+| | [Privacy](docs/privacy.md) | What is stored and sent, and how to minimise it |
+| Project | [Development](docs/development.md), [Upgrading from 1.x](docs/upgrading-from-v1.md) | Working on the code; moving from version 1 |
 
 ---
 

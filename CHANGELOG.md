@@ -1,6 +1,6 @@
 # Changelog
 
-## 2.0.0 — unreleased
+## 2.0.0 (unreleased)
 
 A redesign of how the controller and workers cooperate. Not compatible with 1.x; see
 [docs/upgrading-from-v1.md](docs/upgrading-from-v1.md).
@@ -30,9 +30,24 @@ A redesign of how the controller and workers cooperate. Not compatible with 1.x;
 - Docker images (non-root, health checks), Compose stacks for development, the control
   plane and worker hosts, a Helm chart for Kubernetes, CI with tests, image builds, secret scanning and dependency
   audit, and image publishing on release tags.
-- Documentation for architecture, deployment, configuration, API, token servers,
-  results, privacy and development, published as a website (MkDocs, Material theme) on GitHub Pages:
+- A complete manual (getting started, cameras, workers, results, sign-in, production,
+  Kubernetes, monitoring, troubleshooting) and reference pages (configuration, API, token
+  servers, architecture, privacy), published as a website on GitHub Pages:
   https://naumanhsa.github.io/watchtower/
+- Optional HTTPS for live view on worker hosts (`--profile tls` in `deploy/compose/worker`),
+  needed when the dashboard is served over HTTPS.
+- The development stack can run a second worker (`--profile second-worker`) and offers
+  three fake camera addresses, to try placement and failover on one machine.
+- The controller logs why a sign-in was refused (never the token).
+
+### Fixed during 2.0 development
+- ONNX Runtime 1.31 sent usage telemetry to Microsoft from camera hosts even after
+  `disable_telemetry_events()`; workers now set `ORT_DISABLE_TELEMETRY=1` before it loads
+  (verified with a packet capture).
+- SSO sign-ins failed for about a minute after a machine booted (the signing-key cache
+  looked fresh at boot).
+- A user who signed in through SSO without a Watchtower role was returned to the sign-in
+  page without an explanation.
 
 ### Fixed (relative to 1.x)
 - Results were never sent.

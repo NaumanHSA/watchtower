@@ -69,3 +69,10 @@
 
 /* The home page opens with the hero; its "edit this page" button would sit on top of it. */
 .md-content__inner:has(> .wt-hero) > .md-content__button { display: none; }
+
+/* Page titles in full colour rather than Material's lighter grey. */
+.md-typeset h1 { color: var(--md-default-fg-color); }
+
+/* "Start here" on the home page: four steps read best as two rows of two. */
+.md-typeset .grid.wt-steps { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@media (max-width: 45em) { .md-typeset .grid.wt-steps { grid-template-columns: 1fr; } }

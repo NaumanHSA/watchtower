@@ -2,16 +2,16 @@
 
 Watchtower has three services and one shared protocol package:
 
-- **controller** — the control plane. Holds the desired state (which cameras should
+- **controller**: the control plane. It holds the desired state (which cameras should
   run, with what settings) in MongoDB, decides which worker runs each camera, serves
   the REST API, the dashboard and a live event stream.
-- **worker** — runs on any machine with access to cameras. Pulls its assignments from
+- **worker**: runs on any machine with access to cameras. Pulls its assignments from
   the controller, runs one detection engine process per camera, delivers results, and
   serves live video through a MediaMTX instance next to it.
-- **token server** — answers "is this token valid, and what may it do?" for the
+- **token server**: answers "is this token valid, and what may it do?" for the
   controller, and holds the key results are encrypted with. Replaceable by your own
   service ([contract](token-server.md)).
-- **watchtower-contracts** — the Pydantic models of every message above.
+- **watchtower-contracts**: the Pydantic models of every message above.
 
 ## Desired state, pulled
 
@@ -77,7 +77,7 @@ Each tick (every 2 s, or immediately after a relevant change) the scheduler:
 | An engine process crashes | Same restart path as above. |
 | A worker dies or loses its network | After the lease + grace (60 + 15 s by default) it is `offline` and its streams are placed on other workers. Measured end to end: 84 s from `SIGKILL` to running elsewhere. |
 | A worker shuts down cleanly | On `SIGTERM` it reports `draining`; the controller moves its streams immediately, then the worker stops its engines. |
-| The controller is down | Workers keep analysing and delivering with their last assignments, and retry syncs with backoff. With `ON_LEASE_EXPIRY=stop` they instead stop their streams once the lease expires — choose this when you run several controller replicas and would rather lose coverage than risk two workers processing one camera during a network partition. |
+| The controller is down | Workers keep analysing and delivering with their last assignments, and retry syncs with backoff. With `ON_LEASE_EXPIRY=stop` they instead stop their streams once the lease expires. Choose this when you run several controller replicas and would rather lose coverage than risk two workers processing one camera during a network partition. |
 | The token server is down | Workers keep syncing with their last known key; API calls with tokens not seen recently get `503`. |
 | A worker's token is revoked | Its next sync gets `403`; it stops all streams and checks back every minute. |
 | MediaMTX restarts | It forgets paths added through its API; the worker re-adds them on its next sync. Measured: live view and analysis back within 12 s. |

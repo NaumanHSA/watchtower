@@ -12,7 +12,7 @@ import re
 REPO = "https://github.com/NaumanHSA/watchtower"
 BRANCH = "main"
 
-# [text](../path#anchor) — a Markdown link whose target leaves docs/.
+# [text](../path#anchor): a Markdown link whose target leaves docs/.
 _LINK = re.compile(r"\]\((?P<path>\.\./[^)\s#]+)(?P<anchor>#[^)\s]*)?\)")
 
 

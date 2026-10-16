@@ -16,8 +16,14 @@ does with that data so you can assess your deployment; it is not legal advice.
 | Token hashes, results private keys | The bundled token server's volume | Until revoked or rotated |
 
 Watchtower does not identify people, keep a face database, or send any data anywhere
-except to the results URL and the live viewers you authorise. onnxruntime telemetry is
-switched off.
+except to the results URL and the live viewers you authorise.
+
+ONNX Runtime, the library that runs the face detector, sends usage telemetry to
+Microsoft by default on Linux. Workers switch this off before the library loads (by
+setting `ORT_DISABLE_TELEMETRY=1`). A packet capture of a worker loading the detector and
+analysing frames confirmed that it then makes no outgoing connections of its own, and a
+test makes sure the setting stays in place. If you build your own worker image or run the worker in
+an unusual way, keep that variable set.
 
 ## Sending less
 

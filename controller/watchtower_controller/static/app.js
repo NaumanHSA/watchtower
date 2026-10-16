@@ -881,14 +881,17 @@ async function boot() {
   try { ssoConfig = (await (await fetch("/api/v1/auth/config")).json()).oidc; } catch { ssoConfig = null; }
   $("sso").hidden = $("sso-or").hidden = !ssoConfig;
   const params = new URLSearchParams(location.search);
+  const returningFromSso = ssoConfig && (params.has("code") || params.has("error"));
   try {
-    if (ssoConfig && (params.has("code") || params.has("error"))) return await signIn(await finishSso(params));
+    if (returningFromSso) return await signIn(await finishSso(params));
     if (ssoConfig && sessionStorage.getItem("wt-sso")) await refreshSso();
     const saved = storedToken();
     if (saved) return await signIn(saved);
     signOut();
   } catch (e) {
-    signOut(e.message === "unauthorized" ? "" : e.message);
+    if (e.message !== "unauthorized") signOut(e.message);
+    // The identity provider let them in but the controller refused the token: usually no Watchtower role.
+    else signOut(returningFromSso ? "You signed in, but Watchtower didn't accept your account. Ask an administrator to give you a Watchtower role." : "");
   }
 }
 

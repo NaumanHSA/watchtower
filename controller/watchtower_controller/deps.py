@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import hmac
+import logging
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from typing import Any
@@ -17,6 +18,8 @@ from .events import Notifier
 from .ratelimit import FailureLimiter
 from .scheduler import Scheduler
 from .settings import Settings
+
+log = logging.getLogger(__name__)
 
 WORKER_TOKEN_HEADER = "X-Watchtower-Token"  # noqa: S105 - a header name, not a secret
 
@@ -80,6 +83,8 @@ async def authenticate(provider: TokenProvider, token: str | None, minimum: Role
     except AuthError as e:
         if limiter:
             limiter.record_failure(client)
+        # The reason helps operators (wrong role mapping, audience, expired token); never log the token.
+        log.info("sign-in refused from %s: %s", client or "unknown address", str(e) or "invalid token")
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, str(e) or "Invalid token",
                             headers={"WWW-Authenticate": "Bearer"}) from e
     except AuthUnavailable as e:

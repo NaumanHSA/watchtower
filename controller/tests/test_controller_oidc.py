@@ -174,3 +174,16 @@ async def test_auth_config_endpoint():
                         "oidc": {"issuer": ISSUER, "client_id": "dashboard", "scope": "openid profile email"}}
     finally:
         MongoClient(MONGO_URI).drop_database(settings.mongo_db)
+
+
+async def test_refused_sign_in_logs_the_reason_but_not_the_token(idp, caplog):
+    from fastapi import HTTPException
+
+    from watchtower_controller.deps import authenticate
+
+    provider = provider_for(idp, role_claim="roles", role_map={})
+    token = idp.token(roles=["something-else"])
+    with caplog.at_level("INFO", logger="watchtower_controller.deps"), pytest.raises(HTTPException):
+        await authenticate(provider, token, Role.VIEWER, client="203.0.113.7")
+    assert "sign-in refused from 203.0.113.7: token has no Watchtower role" in caplog.text
+    assert token not in caplog.text
